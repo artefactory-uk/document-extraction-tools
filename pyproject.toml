@@ -1,0 +1,90 @@
+[project]
+name = "your_module"
+version = "0.1.1"
+description = "A template repository following best practises for data science projects."
+authors = [
+  { name = "Your Name", email = "your.name@artefact.com" }
+]
+# Strictly specify the exact Python version required, in the format
+# requires-python = "==<major>.<minor>.<patch>"
+requires-python = "==3.12.10"
+
+dependencies = [
+  # Add project dependencies here
+  # For example:
+  # "numpy>=1.20,<2.3"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9.0",
+  "pre-commit>=3.3,<4.0",
+  # Add other development dependencies here
+]
+
+[tool.uv]
+environments = [
+    "sys_platform == 'darwin'",
+    "sys_platform == 'linux'",
+]
+
+# Linting configuration
+[tool.ruff]
+lint.select = [
+  "E",
+  "W",
+  "F",
+  "I",
+  "N",
+  "D",
+  "ANN",
+  "Q",
+  "RET",
+  "ARG",
+  "PTH",
+  "PD",
+] # See: https://beta.ruff.rs/docs/rules/
+lint.ignore = [
+  "D100",
+  "D203",
+  "D213",
+  "PTH123",
+]
+line-length = 120
+target-version = "py312"
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "venv",
+  "requirements.txt",
+  "requirements-dev.txt" # Optionally exclude generated requirements files
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*"= ["D102", "D103", "D104", "ANN201", "ANN202"]
+"__init__.py" = ["D104"] # ignore no docstrings in __init__.py
+
+[tool.ruff.lint.isort]
+known-first-party = ["your_module"] # enter your module name here, e.g. "src"
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
