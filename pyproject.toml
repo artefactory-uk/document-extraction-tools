@@ -1,5 +1,5 @@
 [project]
-name = "your_module"
+name = "document-extraction-tools"
 version = "0.1.1"
 description = "A template repository following best practises for data science projects."
 authors = [
@@ -13,6 +13,9 @@ dependencies = [
   # Add project dependencies here
   # For example:
   # "numpy>=1.20,<2.3"
+  "pydantic>=2.0.0",
+  "pdf2image>=1.17.0",
+  "types-PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -83,7 +86,7 @@ quote-style = "double"
 "__init__.py" = ["D104"] # ignore no docstrings in __init__.py
 
 [tool.ruff.lint.isort]
-known-first-party = ["your_module"] # enter your module name here, e.g. "src"
+known-first-party = ["document-extraction-tools"] # enter your module name here, e.g. "src"
 
 [build-system]
 requires = ["uv_build>=0.9.9,<0.10.0"]
