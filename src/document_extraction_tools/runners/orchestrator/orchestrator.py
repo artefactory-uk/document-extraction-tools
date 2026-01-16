@@ -14,7 +14,6 @@ from pydantic import BaseModel
 from document_extraction_tools.base.converter.converter import BaseConverter
 from document_extraction_tools.base.exporter.exporter import BaseExporter
 from document_extraction_tools.base.extractor.extractor import BaseExtractor
-from document_extraction_tools.base.file_lister.file_lister import BaseFileLister
 from document_extraction_tools.base.reader.reader import BaseReader
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.path_identifier import PathIdentifier
@@ -33,7 +32,6 @@ class PipelineOrchestrator:
 
     def __init__(
         self,
-        file_lister: BaseFileLister,
         reader: BaseReader,
         converter: BaseConverter,
         extractor: BaseExtractor,
@@ -45,7 +43,6 @@ class PipelineOrchestrator:
         """Initialize the orchestrator with pipeline components.
 
         Args:
-            file_lister (BaseFileLister): Component responsible for discovering files.
             reader (BaseReader): Component to read raw file bytes.
             converter (BaseConverter): Component to transform bytes into Document objects.
             extractor (BaseExtractor): Component to extract structured data via LLM.
@@ -54,7 +51,6 @@ class PipelineOrchestrator:
             max_workers (int): Number of CPU processes for parallel conversion. Defaults to 4.
             max_concurrency (int): Max number of concurrent I/O operations. Defaults to 10.
         """
-        self.file_lister = file_lister
         self.reader = reader
         self.converter = converter
         self.extractor = extractor
@@ -66,24 +62,24 @@ class PipelineOrchestrator:
 
     @staticmethod
     def _ingest(
-        input_ref: PathIdentifier, reader: BaseReader, converter: BaseConverter
+        path_identifier: PathIdentifier, reader: BaseReader, converter: BaseConverter
     ) -> Document:
         """Performs the CPU-bound ingestion phase.
 
         Args:
-            input_ref (PathIdentifier): The reference to the source file.
+            path_identifier (PathIdentifier): The path identifier to the source file.
             reader (BaseReader): The reader instance to use.
             converter (BaseConverter): The converter instance to use.
 
         Returns:
             Document: The fully parsed document object.
         """
-        doc_bytes = reader.read(input_ref)
+        doc_bytes = reader.read(path_identifier)
         return converter.convert(doc_bytes)
 
     async def process_document(
         self,
-        input_ref: PathIdentifier,
+        path_identifier: PathIdentifier,
         pool: ProcessPoolExecutor,
         semaphore: asyncio.Semaphore,
     ) -> None:
@@ -94,34 +90,33 @@ class PipelineOrchestrator:
         3. Export -> Async Wait (I/O).
 
         Args:
-            input_ref (PathIdentifier): The input file to process.
+            path_identifier (PathIdentifier): The input file to process.
             pool (ProcessPoolExecutor): The shared pool for CPU tasks.
             semaphore (asyncio.Semaphore): The shared limiter for I/O tasks.
         """
         loop = asyncio.get_running_loop()
 
         document = await loop.run_in_executor(
-            pool, self._ingest, input_ref, self.reader, self.converter
+            pool, self._ingest, path_identifier, self.reader, self.converter
         )
 
         async with semaphore:
             extracted_data = await self.extractor.extract(document, self.schema)
             await self.exporter.export(extracted_data)
 
-    async def run(self) -> None:
-        """Main entry point. Discovers files and orchestrates their execution."""
-        files_to_process = self.file_lister.list_files()
+    async def run(self, file_paths_to_process: list[PathIdentifier]) -> None:
+        """Main entry point. Orchestrates the execution of the provided file list.
 
-        if not files_to_process:
-            return
-
+        Args:
+            file_paths_to_process (list[PathIdentifier]): The list of file paths to process.
+        """
         semaphore = asyncio.Semaphore(self.max_concurrency)
 
         with ProcessPoolExecutor(max_workers=self.max_workers) as pool:
 
             tasks = [
-                self.process_document(file_ref, pool, semaphore)
-                for file_ref in files_to_process
+                self.process_document(path_identifier, pool, semaphore)
+                for path_identifier in file_paths_to_process
             ]
 
             await asyncio.gather(*tasks)
