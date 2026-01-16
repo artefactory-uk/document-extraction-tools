@@ -6,13 +6,9 @@ and persisting it to a target destination.
 """
 
 from abc import ABC, abstractmethod
-from typing import TypeVar
 
-from pydantic import BaseModel
-
+from document_extraction_tools.schemas.schema import ExtractionSchema
 from document_extraction_tools.types.path_identifier import PathIdentifier
-
-T = TypeVar("T", bound=BaseModel)
 
 
 class BaseExporter(ABC):
@@ -27,13 +23,13 @@ class BaseExporter(ABC):
         self.destination = destination
 
     @abstractmethod
-    async def export(self, data: T) -> None:
+    async def export(self, data: ExtractionSchema) -> None:
         """Persists extracted data to the configured destination.
 
         This is an asynchronous operation to support non-blocking I/O writes.
 
         Args:
-            data (BaseModel): The populated Pydantic model containing the extracted information.
+            data (ExtractionSchema): The populated Pydantic model containing the extracted information.
 
         Returns:
             None: The method should raise an exception if the export fails.

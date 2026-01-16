@@ -2,10 +2,9 @@
 
 import logging
 from pathlib import Path
-from typing import TypeVar
+from typing import Any
 
 import yaml
-from pydantic import BaseModel
 
 from document_extraction_tools.config.converter_config import BaseConverterConfig
 from document_extraction_tools.config.exporter_config import BaseExporterConfig
@@ -17,35 +16,22 @@ from document_extraction_tools.config.reader_config import BaseReaderConfig
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseModel)
 
-
-def _load_yaml(path: Path, model_class: type[T]) -> T:
-    """Helper to load a YAML file into a specific Pydantic model.
+def _load_yaml(path: Path) -> dict[str, Any]:
+    """Helper to load a YAML file into a dictionary.
 
     Args:
         path (Path): Path to the .yaml file.
-        model_class (type[T]): The Pydantic model class to validate against.
 
     Returns:
-        T: An instance of the model class populated with data.
-
-    Raises:
-        FileNotFoundError: If the file is missing and the model has required fields.
+        dict[str, Any]: The parsed YAML data. Returns an empty dict if the file
+        does not exist or is empty.
     """
     if not path.exists():
-        try:
-            return model_class()
-        except Exception:
-            raise FileNotFoundError(
-                f"Config file not found at '{path}' and the configuration "
-                f"class '{model_class.__name__}' requires mandatory fields."
-            )
+        return {}
 
     with open(path) as f:
-        data = yaml.safe_load(f) or {}
-
-    return model_class(**data)
+        return yaml.safe_load(f) or {}
 
 
 def load_config(
@@ -88,9 +74,20 @@ def load_config(
         "exporter": ("exporter.yaml", exporter_cls),
     }
 
-    loaded_components = {
-        field: _load_yaml(base_dir / filename, cls)
-        for field, (filename, cls) in component_map.items()
-    }
+    loaded_components = {}
+
+    for field, (filename, cls) in component_map.items():
+        file_path = base_dir / filename
+        data = _load_yaml(file_path)
+
+        try:
+            loaded_components[field] = cls(**data)
+        except Exception as e:
+            if not file_path.exists():
+                raise FileNotFoundError(
+                    f"Config file not found at '{file_path}' and the configuration "
+                    f"class '{cls.__name__}' requires mandatory fields."
+                ) from e
+            raise e
 
     return PipelineConfig(**loaded_components)

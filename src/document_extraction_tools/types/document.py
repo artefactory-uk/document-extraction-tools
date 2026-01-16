@@ -1,20 +1,29 @@
 """Domain models representing the structured document state."""
 
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
-from pydantic import BaseModel, Field
+import numpy as np
+from PIL import Image as PILImage
+from pydantic import BaseModel, ConfigDict, Field
+
+PILImageType: TypeAlias = PILImage.Image
+NumpyArrayType: TypeAlias = np.ndarray
 
 
-class PageContent(BaseModel):
-    """Holds the actual content extracted from a single page."""
+class TextData(BaseModel):
+    """Encapsulates textual content."""
 
-    content_type: Literal["image", "text"] = Field(
-        ..., description="The type of content extracted."
-    )
+    content: str = Field(..., description="The extracted text string.")
 
-    data: bytes | str = Field(
+
+class ImageData(BaseModel):
+    """Encapsulates image content in various formats."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    content: bytes | PILImageType | NumpyArrayType = Field(
         ...,
-        description="The payload. For 'image', this is bytes. For 'text', this is a string.",
+        description="The image payload. Can be raw bytes, a PIL Image, or a NumPy array.",
     )
 
 
@@ -25,7 +34,10 @@ class Page(BaseModel):
         ..., ge=1, description="The 1-based index of the page in the original document."
     )
 
-    content: PageContent = Field(..., description="The parsed content of this page.")
+    data: ImageData | TextData = Field(
+        ...,
+        description="The payload for the page.",
+    )
 
 
 class Document(BaseModel):
@@ -33,15 +45,19 @@ class Document(BaseModel):
 
     id: str = Field(..., description="A unique identifier for this document.")
 
+    content_type: Literal["image", "text"] = Field(
+        ..., description="The type of content extracted."
+    )
+
+    pages: list[Page] = Field(
+        default_factory=list,
+        description="Ordered list of pages belonging to this document.",
+    )
+
     source_path: str = Field(
         ..., description="Traceability link to the original source."
     )
 
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata."
-    )
-
-    pages: list[Page] = Field(
-        default_factory=list,
-        description="Ordered list of pages belonging to this document.",
     )

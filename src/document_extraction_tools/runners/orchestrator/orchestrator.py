@@ -8,20 +8,20 @@ concurrency to maximize throughput.
 import asyncio
 import logging
 from concurrent.futures import ProcessPoolExecutor
-
-from pydantic import BaseModel
+from typing import Generic
 
 from document_extraction_tools.base.converter.converter import BaseConverter
 from document_extraction_tools.base.exporter.exporter import BaseExporter
 from document_extraction_tools.base.extractor.extractor import BaseExtractor
 from document_extraction_tools.base.reader.reader import BaseReader
+from document_extraction_tools.schemas.schema import ExtractionSchema
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.path_identifier import PathIdentifier
 
 logger = logging.getLogger(__name__)
 
 
-class PipelineOrchestrator:
+class PipelineOrchestrator(Generic[ExtractionSchema]):
     """Coordinates the document extraction pipeline.
 
     This class manages the lifecycle of document processing, ensuring that
@@ -36,7 +36,7 @@ class PipelineOrchestrator:
         converter: BaseConverter,
         extractor: BaseExtractor,
         exporter: BaseExporter,
-        schema: type[BaseModel],
+        schema: type[ExtractionSchema],
         max_workers: int = 4,
         max_concurrency: int = 10,
     ) -> None:
@@ -47,7 +47,7 @@ class PipelineOrchestrator:
             converter (BaseConverter): Component to transform bytes into Document objects.
             extractor (BaseExtractor): Component to extract structured data via LLM.
             exporter (BaseExporter): Component to persist the results.
-            schema (Type[BaseModel]): The target Pydantic model definition for extraction.
+            schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
             max_workers (int): Number of CPU processes for parallel conversion. Defaults to 4.
             max_concurrency (int): Max number of concurrent I/O operations. Defaults to 10.
         """
@@ -101,7 +101,9 @@ class PipelineOrchestrator:
         )
 
         async with semaphore:
-            extracted_data = await self.extractor.extract(document, self.schema)
+            extracted_data: ExtractionSchema = await self.extractor.extract(
+                document, self.schema
+            )
             await self.exporter.export(extracted_data)
 
     async def run(self, file_paths_to_process: list[PathIdentifier]) -> None:
