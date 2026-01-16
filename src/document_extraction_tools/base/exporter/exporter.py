@@ -27,7 +27,7 @@ class BaseExporter(ABC):
         self.destination = destination
 
     @abstractmethod
-    async def export(self, data: type[T]) -> None:
+    async def export(self, data: T) -> None:
         """Persists extracted data to the configured destination.
 
         This is an asynchronous operation to support non-blocking I/O writes.

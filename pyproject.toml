@@ -86,7 +86,7 @@ quote-style = "double"
 "__init__.py" = ["D104"] # ignore no docstrings in __init__.py
 
 [tool.ruff.lint.isort]
-known-first-party = ["document-extraction-tools"] # enter your module name here, e.g. "src"
+known-first-party = ["document_extraction_tools"] # enter your module name here, e.g. "src"
 
 [build-system]
 requires = ["uv_build>=0.9.9,<0.10.0"]

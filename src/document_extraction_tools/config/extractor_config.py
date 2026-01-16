@@ -8,5 +8,3 @@ class BaseExtractorConfig(BaseModel):
 
     Implementations should subclass this to add specific parameters.
     """
-
-    pass

@@ -8,5 +8,3 @@ class BaseFileListerConfig(BaseModel):
 
     Implementations should subclass this to add specific parameters.
     """
-
-    pass
