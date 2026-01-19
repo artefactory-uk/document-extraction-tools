@@ -7,11 +7,20 @@ and returning a list of standardized identifiers to be processed.
 
 from abc import ABC, abstractmethod
 
+from document_extraction_tools.config.file_lister_config import FileListerConfig
 from document_extraction_tools.types.path_identifier import PathIdentifier
 
 
 class BaseFileLister(ABC):
     """Abstract interface for file discovery."""
+
+    def __init__(self, config: FileListerConfig) -> None:
+        """Initialize with a configuration object.
+
+        Args:
+            config (FileListerConfig): Configuration specific to the file lister implementation.
+        """
+        self.config = config
 
     @abstractmethod
     def list_files(self) -> list[PathIdentifier]:

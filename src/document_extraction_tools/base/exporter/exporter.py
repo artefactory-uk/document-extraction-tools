@@ -7,20 +7,20 @@ and persisting it to a target destination.
 
 from abc import ABC, abstractmethod
 
-from document_extraction_tools.schemas.schema import ExtractionSchema
-from document_extraction_tools.types.path_identifier import PathIdentifier
+from document_extraction_tools.config.exporter_config import ExporterConfig
+from document_extraction_tools.types.schema import ExtractionSchema
 
 
 class BaseExporter(ABC):
     """Abstract interface for data persistence."""
 
-    def __init__(self, destination: PathIdentifier) -> None:
-        """Initializes the exporter with a fixed destination.
+    def __init__(self, config: ExporterConfig) -> None:
+        """Initialize with a configuration object.
 
         Args:
-            destination (PathIdentifier): The target root location.
+            config (ExporterConfig): Configuration specific to the exporter implementation.
         """
-        self.destination = destination
+        self.config = config
 
     @abstractmethod
     async def export(self, data: ExtractionSchema) -> None:

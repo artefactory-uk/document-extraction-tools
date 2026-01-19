@@ -7,12 +7,21 @@ into a structured Document object containing pages and content.
 
 from abc import ABC, abstractmethod
 
+from document_extraction_tools.config.converter_config import ConverterConfig
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.document_bytes import DocumentBytes
 
 
 class BaseConverter(ABC):
     """Abstract interface for document transformation."""
+
+    def __init__(self, config: ConverterConfig) -> None:
+        """Initialize with a configuration object.
+
+        Args:
+            config (ConverterConfig): Configuration specific to the converter implementation.
+        """
+        self.config = config
 
     @abstractmethod
     def convert(self, document_bytes: DocumentBytes) -> Document:

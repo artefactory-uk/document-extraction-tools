@@ -14,9 +14,11 @@ from document_extraction_tools.base.converter.converter import BaseConverter
 from document_extraction_tools.base.exporter.exporter import BaseExporter
 from document_extraction_tools.base.extractor.extractor import BaseExtractor
 from document_extraction_tools.base.reader.reader import BaseReader
-from document_extraction_tools.schemas.schema import ExtractionSchema
+from document_extraction_tools.config.orchestrator_config import OrchestratorConfig
+from document_extraction_tools.config.pipeline_config import PipelineConfig
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.path_identifier import PathIdentifier
+from document_extraction_tools.types.schema import ExtractionSchema
 
 logger = logging.getLogger(__name__)
 
@@ -32,33 +34,66 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
 
     def __init__(
         self,
+        config: OrchestratorConfig,
         reader: BaseReader,
         converter: BaseConverter,
         extractor: BaseExtractor,
         exporter: BaseExporter,
         schema: type[ExtractionSchema],
-        max_workers: int = 4,
-        max_concurrency: int = 10,
     ) -> None:
         """Initialize the orchestrator with pipeline components.
 
         Args:
+            config (OrchestratorConfig): Configuration for the orchestrator.
             reader (BaseReader): Component to read raw file bytes.
             converter (BaseConverter): Component to transform bytes into Document objects.
             extractor (BaseExtractor): Component to extract structured data via LLM.
             exporter (BaseExporter): Component to persist the results.
             schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
-            max_workers (int): Number of CPU processes for parallel conversion. Defaults to 4.
-            max_concurrency (int): Max number of concurrent I/O operations. Defaults to 10.
         """
+        self.config = config
         self.reader = reader
         self.converter = converter
         self.extractor = extractor
         self.exporter = exporter
         self.schema = schema
 
-        self.max_workers = max_workers
-        self.max_concurrency = max_concurrency
+    @classmethod
+    def from_config(
+        cls,
+        config: PipelineConfig,
+        schema: type[ExtractionSchema],
+        reader_cls: type[BaseReader],
+        converter_cls: type[BaseConverter],
+        extractor_cls: type[BaseExtractor],
+        exporter_cls: type[BaseExporter],
+    ) -> "PipelineOrchestrator[ExtractionSchema]":
+        """Factory method to create an Orchestrator from a PipelineConfig.
+
+        Args:
+            config (PipelineConfig): The full pipeline configuration.
+            schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
+            reader_cls (type[BaseReader]): The concrete Reader class to instantiate.
+            converter_cls (type[BaseConverter]): The concrete Converter class to instantiate.
+            extractor_cls (type[BaseExtractor]): The concrete Extractor class to instantiate.
+            exporter_cls (type[BaseExporter]): The concrete Exporter class to instantiate.
+
+        Returns:
+            PipelineOrchestrator[ExtractionSchema]: The configured orchestrator instance.
+        """
+        reader_instance = reader_cls(config.reader)
+        converter_instance = converter_cls(config.converter)
+        extractor_instance = extractor_cls(config.extractor)
+        exporter_instance = exporter_cls(config.exporter)
+
+        return cls(
+            config=config.orchestrator,
+            reader=reader_instance,
+            converter=converter_instance,
+            extractor=extractor_instance,
+            exporter=exporter_instance,
+            schema=schema,
+        )
 
     @staticmethod
     def _ingest(
@@ -112,9 +147,9 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
         Args:
             file_paths_to_process (list[PathIdentifier]): The list of file paths to process.
         """
-        semaphore = asyncio.Semaphore(self.max_concurrency)
+        semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
-        with ProcessPoolExecutor(max_workers=self.max_workers) as pool:
+        with ProcessPoolExecutor(max_workers=self.config.max_workers) as pool:
 
             tasks = [
                 self.process_document(path_identifier, pool, semaphore)

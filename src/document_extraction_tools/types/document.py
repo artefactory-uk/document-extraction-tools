@@ -4,7 +4,7 @@ from typing import Any, Literal, TypeAlias
 
 import numpy as np
 from PIL import Image as PILImage
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 PILImageType: TypeAlias = PILImage.Image
 NumpyArrayType: TypeAlias = np.ndarray
@@ -61,3 +61,17 @@ class Document(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata."
     )
+
+    @model_validator(mode="after")
+    def check_content_consistency(self) -> "Document":
+        """Ensures page data types match the declared content_type."""
+        expected_type = ImageData if self.content_type == "image" else TextData
+
+        for page in self.pages:
+            if not isinstance(page.data, expected_type):
+                raise ValueError(
+                    f"Document declared as '{self.content_type}' but Page {page.page_number} "
+                    f"contains incompatible '{type(page.data).__name__}'."
+                )
+
+        return self

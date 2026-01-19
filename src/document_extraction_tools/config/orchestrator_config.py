@@ -1,13 +1,10 @@
-"""Base configuration for the Orchestrator component."""
+"""Configuration for the Orchestrator component."""
 
 from pydantic import BaseModel, Field
 
 
 class OrchestratorConfig(BaseModel):
-    """Configuration for the Pipeline Orchestrator.
-
-    Matches arguments in PipelineOrchestrator.__init__.
-    """
+    """Configuration for the Pipeline Orchestrator."""
 
     max_workers: int = Field(
         default=4,
