@@ -50,6 +50,7 @@ repos:
       - id: mypy
         name: Run mypy
         exclude: ^adder/tests/
+        additional_dependencies: [types-PyYAML]
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1
     hooks:
