@@ -3,5 +3,8 @@
 from pydantic import BaseModel
 
 
-class ReaderConfig(BaseModel):
-    """Configuration for Readers."""
+class BaseReaderConfig(BaseModel):
+    """Base config for Readers.
+
+    Implementations should subclass this to add specific parameters.
+    """

@@ -3,5 +3,8 @@
 from pydantic import BaseModel
 
 
-class ExtractorConfig(BaseModel):
-    """Configuration for Extractors."""
+class BaseExtractorConfig(BaseModel):
+    """Base config for Extractors.
+
+    Implementations should subclass this to add specific parameters.
+    """

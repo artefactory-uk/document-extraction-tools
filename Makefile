@@ -12,7 +12,7 @@
 # --- Entry point for the application ---
 # Note: we run as a module (e.g., 'python -m your_module.main') to ensure correct import resolution and package discovery.
 # This approach sets up the package context properly, allowing relative imports and dependencies to work as intended.
-APP_ENTRYPOINT := your_module.main
+APP_ENTRYPOINT := document_extraction_tools.examples.simple_lease_extraction.main
 
 # --- Shell Configuration ---
 SHELL       := /bin/bash

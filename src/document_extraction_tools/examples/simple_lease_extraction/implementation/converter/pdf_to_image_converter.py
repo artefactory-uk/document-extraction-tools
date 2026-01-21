@@ -1,0 +1,49 @@
+"""PDF-to-image converter implementation for the example pipeline."""
+
+import io
+
+from pdf2image import convert_from_bytes  # type: ignore
+
+from document_extraction_tools.base.converter.converter import BaseConverter
+from document_extraction_tools.examples.simple_lease_extraction.config.converter_config import (
+    ConverterConfig,
+)
+from document_extraction_tools.types.document import Document, ImageData, Page
+from document_extraction_tools.types.document_bytes import DocumentBytes
+
+
+class PDFToImageConverter(BaseConverter):
+    """Converts PDF bytes into image pages."""
+
+    def __init__(self, config: ConverterConfig) -> None:
+        """Initialize converter with example config."""
+        super().__init__(config)
+        self.dpi = config.dpi
+        self.image_format = config.format
+
+    def convert(self, document_bytes: DocumentBytes) -> Document:
+        """Convert raw PDF bytes into a Document with image pages."""
+        pil_images = convert_from_bytes(
+            document_bytes.file_bytes, dpi=self.dpi, fmt=self.image_format
+        )
+
+        pages = []
+        for i, img in enumerate(pil_images):
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format=self.image_format.upper())
+
+            pages.append(
+                Page(
+                    page_number=i + 1,
+                    data=ImageData(
+                        content=img_byte_arr.getvalue(),
+                    ),
+                )
+            )
+
+        return Document(
+            id=document_bytes.filename,
+            content_type="image",
+            source_path=document_bytes.original_source,
+            pages=pages,
+        )

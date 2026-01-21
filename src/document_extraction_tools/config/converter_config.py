@@ -3,5 +3,8 @@
 from pydantic import BaseModel
 
 
-class ConverterConfig(BaseModel):
-    """Configuration for Converters."""
+class BaseConverterConfig(BaseModel):
+    """Base config for Converters.
+
+    Implementations should subclass this to add specific parameters.
+    """
