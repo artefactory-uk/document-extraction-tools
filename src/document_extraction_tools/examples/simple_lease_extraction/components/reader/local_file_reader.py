@@ -19,7 +19,7 @@ class LocalFileReader(BaseReader):
 
     def read(self, path: PathIdentifier) -> DocumentBytes:
         """Read bytes from the given path identifier."""
-        file_path = Path(path.path)
+        file_path = path.path if isinstance(path.path, Path) else Path(path.path)
 
         return DocumentBytes(
             file_bytes=file_path.read_bytes(),

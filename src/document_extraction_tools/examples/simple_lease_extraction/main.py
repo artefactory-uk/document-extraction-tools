@@ -48,7 +48,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def main() -> None:
+def main() -> None:
     """Run the example extraction pipeline."""
     # 1. Load Configuration
     config_path = str(Path(__file__).parent / "config")
@@ -80,8 +80,8 @@ async def main() -> None:
 
     logger.info(f"Found {len(files)} files to process.")
 
-    await orchestrator.run(files)
+    asyncio.run(orchestrator.run(files))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

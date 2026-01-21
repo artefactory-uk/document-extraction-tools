@@ -1,6 +1,5 @@
 """Local file lister implementation for the example pipeline."""
 
-import os
 from pathlib import Path
 
 from document_extraction_tools.base.file_lister.file_lister import BaseFileLister
@@ -21,15 +20,16 @@ class LocalFileLister(BaseFileLister):
 
     def list_files(self) -> list[PathIdentifier]:
         """Return PathIdentifier entries for matching files."""
-        files: list[PathIdentifier] = []
         if not self.source_dir.exists():
             raise FileNotFoundError(
                 f"Source directory {self.source_dir} does not exist."
             )
 
-        for root, _, filenames in os.walk(self.source_dir):
-            for name in filenames:
-                if any(name.lower().endswith(ext) for ext in self.extensions):
-                    full_path = Path(root) / name
-                    files.append(PathIdentifier(path=str(full_path)))
+        files: list[PathIdentifier] = []
+        for ext in self.extensions:
+            pattern = f"**/*{ext}"
+            files.extend(
+                PathIdentifier(path=path)
+                for path in self.source_dir.glob(pattern, case_sensitive=False)
+            )
         return files

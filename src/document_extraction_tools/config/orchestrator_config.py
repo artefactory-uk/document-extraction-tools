@@ -1,10 +1,14 @@
 """Configuration for the Orchestrator component."""
 
+from typing import ClassVar
+
 from pydantic import BaseModel, Field
 
 
 class OrchestratorConfig(BaseModel):
     """Configuration for the Pipeline Orchestrator."""
+
+    filename: ClassVar[str] = "orchestrator.yaml"
 
     max_workers: int = Field(
         default=4,

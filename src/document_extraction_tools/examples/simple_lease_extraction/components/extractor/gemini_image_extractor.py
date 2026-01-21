@@ -13,8 +13,6 @@ from document_extraction_tools.examples.simple_lease_extraction.config.extractor
 )
 from document_extraction_tools.types.document import Document, ImageData
 
-load_dotenv()
-
 
 class GeminiImageExtractor(BaseExtractor):
     """Extracts lease data from images using the Gemini API."""
@@ -22,6 +20,8 @@ class GeminiImageExtractor(BaseExtractor):
     def __init__(self, config: ExtractorConfig) -> None:
         """Initialize the extractor and client."""
         super().__init__(config)
+
+        load_dotenv()
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("Set GEMINI_API_KEY in the environment.")

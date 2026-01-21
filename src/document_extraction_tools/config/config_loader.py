@@ -26,9 +26,12 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     Returns:
         dict[str, Any]: The parsed YAML data. Returns an empty dict if the file
         does not exist or is empty.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
     """
     if not path.exists():
-        return {}
+        raise FileNotFoundError(f"Config file not found: {path.absolute()}")
 
     with open(path) as f:
         return yaml.safe_load(f) or {}
@@ -36,7 +39,6 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def load_config(
     config_dir: str = "config",
-    mapping_file: str = "config_file_mapping.yaml",
     orchestrator_cls: type[OrchestratorConfig] = OrchestratorConfig,
     lister_cls: type[BaseFileListerConfig] = BaseFileListerConfig,
     reader_cls: type[BaseReaderConfig] = BaseReaderConfig,
@@ -69,25 +71,13 @@ def load_config(
     if not base_dir.exists():
         raise FileNotFoundError(f"Config directory not found: {base_dir.absolute()}")
 
-    mapping_path = base_dir / mapping_file
-    if not mapping_path.exists():
-        raise FileNotFoundError(
-            f"Mapping file '{mapping_file}' not found in {base_dir.absolute()}. "
-            "This file is required to map components to their config files."
-        )
-
-    file_mapping = _load_yaml(mapping_path)
-    loaded_data: dict[str, Any] = {}
-
-    for field, filename in file_mapping.items():
-        file_path = base_dir / filename
-        loaded_data[field] = _load_yaml(file_path)
-
     return PipelineConfig(
-        orchestrator=orchestrator_cls(**loaded_data.get("orchestrator", {})),
-        file_lister=lister_cls(**loaded_data.get("file_lister", {})),
-        reader=reader_cls(**loaded_data.get("reader", {})),
-        converter=converter_cls(**loaded_data.get("converter", {})),
-        extractor=extractor_cls(**loaded_data.get("extractor", {})),
-        exporter=exporter_cls(**loaded_data.get("exporter", {})),
+        orchestrator=orchestrator_cls(
+            **_load_yaml(base_dir / orchestrator_cls.filename)
+        ),
+        file_lister=lister_cls(**_load_yaml(base_dir / lister_cls.filename)),
+        reader=reader_cls(**_load_yaml(base_dir / reader_cls.filename)),
+        converter=converter_cls(**_load_yaml(base_dir / converter_cls.filename)),
+        extractor=extractor_cls(**_load_yaml(base_dir / extractor_cls.filename)),
+        exporter=exporter_cls(**_load_yaml(base_dir / exporter_cls.filename)),
     )
