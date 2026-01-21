@@ -5,6 +5,21 @@ import logging
 from pathlib import Path
 
 from document_extraction_tools.config.config_loader import load_config
+from document_extraction_tools.examples.simple_lease_extraction.components.converter.pdf_to_image_converter import (
+    PDFToImageConverter,
+)
+from document_extraction_tools.examples.simple_lease_extraction.components.exporter.local_file_exporter import (
+    LocalFileExporter,
+)
+from document_extraction_tools.examples.simple_lease_extraction.components.extractor.gemini_image_extractor import (
+    GeminiImageExtractor,
+)
+from document_extraction_tools.examples.simple_lease_extraction.components.file_lister.local_file_lister import (
+    LocalFileLister,
+)
+from document_extraction_tools.examples.simple_lease_extraction.components.reader.local_file_reader import (
+    LocalFileReader,
+)
 from document_extraction_tools.examples.simple_lease_extraction.config.converter_config import (
     ConverterConfig,
 )
@@ -19,21 +34,6 @@ from document_extraction_tools.examples.simple_lease_extraction.config.file_list
 )
 from document_extraction_tools.examples.simple_lease_extraction.config.reader_config import (
     ReaderConfig,
-)
-from document_extraction_tools.examples.simple_lease_extraction.implementation.converter.pdf_to_image_converter import (
-    PDFToImageConverter,
-)
-from document_extraction_tools.examples.simple_lease_extraction.implementation.exporter.local_file_exporter import (
-    LocalFileExporter,
-)
-from document_extraction_tools.examples.simple_lease_extraction.implementation.extractor.gemini_image_extractor import (
-    GeminiImageExtractor,
-)
-from document_extraction_tools.examples.simple_lease_extraction.implementation.file_lister.local_file_lister import (
-    LocalFileLister,
-)
-from document_extraction_tools.examples.simple_lease_extraction.implementation.reader.local_file_reader import (
-    LocalFileReader,
 )
 from document_extraction_tools.examples.simple_lease_extraction.schema.schema import (
     SimpleLeaseDetails,
