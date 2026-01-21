@@ -6,7 +6,13 @@ from typing import Any
 
 import yaml
 
+from document_extraction_tools.config.converter_config import BaseConverterConfig
+from document_extraction_tools.config.exporter_config import BaseExporterConfig
+from document_extraction_tools.config.extractor_config import BaseExtractorConfig
+from document_extraction_tools.config.file_lister_config import BaseFileListerConfig
+from document_extraction_tools.config.orchestrator_config import OrchestratorConfig
 from document_extraction_tools.config.pipeline_config import PipelineConfig
+from document_extraction_tools.config.reader_config import BaseReaderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,16 +26,25 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     Returns:
         dict[str, Any]: The parsed YAML data. Returns an empty dict if the file
         does not exist or is empty.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
     """
     if not path.exists():
-        return {}
+        raise FileNotFoundError(f"Config file not found: {path.absolute()}")
 
     with open(path) as f:
         return yaml.safe_load(f) or {}
 
 
 def load_config(
-    config_dir: str = "config", mapping_file: str = "config_file_mapping.yaml"
+    config_dir: str = "config",
+    orchestrator_cls: type[OrchestratorConfig] = OrchestratorConfig,
+    lister_cls: type[BaseFileListerConfig] = BaseFileListerConfig,
+    reader_cls: type[BaseReaderConfig] = BaseReaderConfig,
+    converter_cls: type[BaseConverterConfig] = BaseConverterConfig,
+    extractor_cls: type[BaseExtractorConfig] = BaseExtractorConfig,
+    exporter_cls: type[BaseExporterConfig] = BaseExporterConfig,
 ) -> PipelineConfig:
     """Loads configuration based on a mapping file.
 
@@ -39,6 +54,12 @@ def load_config(
     Args:
         config_dir: Directory containing the configs.
         mapping_file: The YAML file that maps component keys to filenames.
+        orchestrator_cls: The OrchestratorConfig subclass to use.
+        lister_cls: The FileListerConfig subclass to use.
+        reader_cls: The ReaderConfig subclass to use.
+        converter_cls: The ConverterConfig subclass to use.
+        extractor_cls: The ExtractorConfig subclass to use.
+        exporter_cls: The ExporterConfig subclass to use.
 
     Returns:
         PipelineConfig: The fully validated configuration.
@@ -50,18 +71,13 @@ def load_config(
     if not base_dir.exists():
         raise FileNotFoundError(f"Config directory not found: {base_dir.absolute()}")
 
-    mapping_path = base_dir / mapping_file
-    if not mapping_path.exists():
-        raise FileNotFoundError(
-            f"Mapping file '{mapping_file}' not found in {base_dir.absolute()}. "
-            "This file is required to map components to their config files."
-        )
-
-    file_mapping = _load_yaml(mapping_path)
-    loaded_data = {}
-
-    for field, filename in file_mapping.items():
-        file_path = base_dir / filename
-        loaded_data[field] = _load_yaml(file_path)
-
-    return PipelineConfig(**loaded_data)
+    return PipelineConfig(
+        orchestrator=orchestrator_cls(
+            **_load_yaml(base_dir / orchestrator_cls.filename)
+        ),
+        file_lister=lister_cls(**_load_yaml(base_dir / lister_cls.filename)),
+        reader=reader_cls(**_load_yaml(base_dir / reader_cls.filename)),
+        converter=converter_cls(**_load_yaml(base_dir / converter_cls.filename)),
+        extractor=extractor_cls(**_load_yaml(base_dir / extractor_cls.filename)),
+        exporter=exporter_cls(**_load_yaml(base_dir / exporter_cls.filename)),
+    )

@@ -7,18 +7,18 @@ and persisting it to a target destination.
 
 from abc import ABC, abstractmethod
 
-from document_extraction_tools.config.exporter_config import ExporterConfig
+from document_extraction_tools.config.exporter_config import BaseExporterConfig
 from document_extraction_tools.types.schema import ExtractionSchema
 
 
 class BaseExporter(ABC):
     """Abstract interface for data persistence."""
 
-    def __init__(self, config: ExporterConfig) -> None:
+    def __init__(self, config: BaseExporterConfig) -> None:
         """Initialize with a configuration object.
 
         Args:
-            config (ExporterConfig): Configuration specific to the exporter implementation.
+            config (BaseExporterConfig): Configuration specific to the exporter implementation.
         """
         self.config = config
 

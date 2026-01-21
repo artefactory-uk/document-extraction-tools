@@ -1,6 +1,0 @@
-orchestrator: orchestrator.yaml
-file_lister: file_lister.yaml
-reader: reader.yaml
-converter: converter.yaml
-extractor: extractor.yaml
-exporter: exporter.yaml

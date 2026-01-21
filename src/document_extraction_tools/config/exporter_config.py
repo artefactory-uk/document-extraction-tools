@@ -1,14 +1,14 @@
 """Configuration for Exporter components."""
 
-from pydantic import BaseModel, Field
+from typing import ClassVar
 
-from document_extraction_tools.types.path_identifier import PathIdentifier
+from pydantic import BaseModel
 
 
-class ExporterConfig(BaseModel):
-    """Configuration for Exporters."""
+class BaseExporterConfig(BaseModel):
+    """Base config for Exporters.
 
-    destination: PathIdentifier = Field(
-        ...,
-        description="The root destination where exported files will be saved.",
-    )
+    Implementations should subclass this to add specific parameters.
+    """
+
+    filename: ClassVar[str] = "exporter.yaml"

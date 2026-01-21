@@ -2,12 +2,12 @@
 
 from pydantic import BaseModel
 
-from document_extraction_tools.config.converter_config import ConverterConfig
-from document_extraction_tools.config.exporter_config import ExporterConfig
-from document_extraction_tools.config.extractor_config import ExtractorConfig
-from document_extraction_tools.config.file_lister_config import FileListerConfig
+from document_extraction_tools.config.converter_config import BaseConverterConfig
+from document_extraction_tools.config.exporter_config import BaseExporterConfig
+from document_extraction_tools.config.extractor_config import BaseExtractorConfig
+from document_extraction_tools.config.file_lister_config import BaseFileListerConfig
 from document_extraction_tools.config.orchestrator_config import OrchestratorConfig
-from document_extraction_tools.config.reader_config import ReaderConfig
+from document_extraction_tools.config.reader_config import BaseReaderConfig
 
 
 class PipelineConfig(BaseModel):
@@ -17,8 +17,8 @@ class PipelineConfig(BaseModel):
     """
 
     orchestrator: OrchestratorConfig
-    file_lister: FileListerConfig
-    reader: ReaderConfig
-    converter: ConverterConfig
-    extractor: ExtractorConfig
-    exporter: ExporterConfig
+    file_lister: BaseFileListerConfig
+    reader: BaseReaderConfig
+    converter: BaseConverterConfig
+    extractor: BaseExtractorConfig
+    exporter: BaseExporterConfig
