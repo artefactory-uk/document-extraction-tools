@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from document_extraction_tools.config.extractor_config import BaseExtractorConfig
+from document_extraction_tools.config.base_extractor_config import BaseExtractorConfig
 
 
 class ExtractorConfig(BaseExtractorConfig):

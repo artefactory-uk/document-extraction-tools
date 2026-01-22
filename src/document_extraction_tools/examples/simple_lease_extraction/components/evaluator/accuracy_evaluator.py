@@ -1,6 +1,6 @@
 """Accuracy evaluator for the example schema."""
 
-from document_extraction_tools.base.evaluator.evaluator import BaseEvaluator
+from document_extraction_tools.base.evaluator.base_evaluator import BaseEvaluator
 from document_extraction_tools.examples.simple_lease_extraction.config.evaluator_config import (
     AccuracyEvaluatorConfig,
 )

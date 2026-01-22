@@ -7,7 +7,9 @@ and returning a list of standardized identifiers to be processed.
 
 from abc import ABC, abstractmethod
 
-from document_extraction_tools.config.file_lister_config import BaseFileListerConfig
+from document_extraction_tools.config.base_file_lister_config import (
+    BaseFileListerConfig,
+)
 from document_extraction_tools.types.path_identifier import PathIdentifier
 
 

@@ -6,9 +6,21 @@ from typing import Any
 
 import yaml
 
-from document_extraction_tools.config.converter_config import BaseConverterConfig
-from document_extraction_tools.config.evaluation_exporter_config import (
+from document_extraction_tools.config.base_converter_config import BaseConverterConfig
+from document_extraction_tools.config.base_evaluation_exporter_config import (
     BaseEvaluationExporterConfig,
+)
+from document_extraction_tools.config.base_evaluator_config import BaseEvaluatorConfig
+from document_extraction_tools.config.base_extraction_exporter_config import (
+    BaseExtractionExporterConfig,
+)
+from document_extraction_tools.config.base_extractor_config import BaseExtractorConfig
+from document_extraction_tools.config.base_file_lister_config import (
+    BaseFileListerConfig,
+)
+from document_extraction_tools.config.base_reader_config import BaseReaderConfig
+from document_extraction_tools.config.base_test_data_loader_config import (
+    BaseTestDataLoaderConfig,
 )
 from document_extraction_tools.config.evaluation_orchestrator_config import (
     EvaluationOrchestratorConfig,
@@ -16,21 +28,11 @@ from document_extraction_tools.config.evaluation_orchestrator_config import (
 from document_extraction_tools.config.evaluation_pipeline_config import (
     EvaluationPipelineConfig,
 )
-from document_extraction_tools.config.evaluator_config import BaseEvaluatorConfig
-from document_extraction_tools.config.extraction_exporter_config import (
-    BaseExtractionExporterConfig,
-)
 from document_extraction_tools.config.extraction_orchestrator_config import (
     ExtractionOrchestratorConfig,
 )
 from document_extraction_tools.config.extraction_pipeline_config import (
     ExtractionPipelineConfig,
-)
-from document_extraction_tools.config.extractor_config import BaseExtractorConfig
-from document_extraction_tools.config.file_lister_config import BaseFileListerConfig
-from document_extraction_tools.config.reader_config import BaseReaderConfig
-from document_extraction_tools.config.test_data_loader_config import (
-    BaseTestDataLoaderConfig,
 )
 
 logger = logging.getLogger(__name__)

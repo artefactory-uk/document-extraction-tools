@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from document_extraction_tools.base.test_data_loader.test_data_loader import (
+from document_extraction_tools.base.test_data_loader.base_test_data_loader import (
     BaseTestDataLoader,
 )
 from document_extraction_tools.examples.simple_lease_extraction.config.test_data_loader_config import (

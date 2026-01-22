@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from document_extraction_tools.base.reader.reader import BaseReader
+from document_extraction_tools.base.reader.base_reader import BaseReader
 from document_extraction_tools.examples.simple_lease_extraction.config.reader_config import (
     ReaderConfig,
 )

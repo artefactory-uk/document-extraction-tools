@@ -5,7 +5,7 @@ from pathlib import Path
 import aiofiles
 from pydantic import BaseModel
 
-from document_extraction_tools.base.exporter.extraction_exporter import (
+from document_extraction_tools.base.exporter.base_extraction_exporter import (
     BaseExtractionExporter,
 )
 from document_extraction_tools.examples.simple_lease_extraction.config.extraction_exporter_config import (

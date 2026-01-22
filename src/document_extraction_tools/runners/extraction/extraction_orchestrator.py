@@ -10,12 +10,12 @@ import logging
 from concurrent.futures import ProcessPoolExecutor
 from typing import Generic
 
-from document_extraction_tools.base.converter.converter import BaseConverter
-from document_extraction_tools.base.exporter.extraction_exporter import (
+from document_extraction_tools.base.converter.base_converter import BaseConverter
+from document_extraction_tools.base.exporter.base_extraction_exporter import (
     BaseExtractionExporter,
 )
-from document_extraction_tools.base.extractor.extractor import BaseExtractor
-from document_extraction_tools.base.reader.reader import BaseReader
+from document_extraction_tools.base.extractor.base_extractor import BaseExtractor
+from document_extraction_tools.base.reader.base_reader import BaseReader
 from document_extraction_tools.config.extraction_orchestrator_config import (
     ExtractionOrchestratorConfig,
 )

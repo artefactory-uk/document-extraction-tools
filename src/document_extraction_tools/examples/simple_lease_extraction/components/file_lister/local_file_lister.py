@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from document_extraction_tools.base.file_lister.file_lister import BaseFileLister
+from document_extraction_tools.base.file_lister.base_file_lister import BaseFileLister
 from document_extraction_tools.examples.simple_lease_extraction.config.file_lister_config import (
     FileListerConfig,
 )

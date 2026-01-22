@@ -7,7 +7,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from document_extraction_tools.base.extractor.extractor import BaseExtractor
+from document_extraction_tools.base.extractor.base_extractor import BaseExtractor
 from document_extraction_tools.examples.simple_lease_extraction.config.extractor_config import (
     ExtractorConfig,
 )

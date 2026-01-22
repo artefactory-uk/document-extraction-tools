@@ -2,7 +2,7 @@
 
 from typing import ClassVar
 
-from document_extraction_tools.config.evaluator_config import BaseEvaluatorConfig
+from document_extraction_tools.config.base_evaluator_config import BaseEvaluatorConfig
 
 
 class AccuracyEvaluatorConfig(BaseEvaluatorConfig):

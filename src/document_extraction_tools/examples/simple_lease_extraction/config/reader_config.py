@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from document_extraction_tools.config.reader_config import BaseReaderConfig
+from document_extraction_tools.config.base_reader_config import BaseReaderConfig
 
 
 class ReaderConfig(BaseReaderConfig):

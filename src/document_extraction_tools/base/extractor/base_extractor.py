@@ -7,7 +7,7 @@ and populating a target Pydantic schema with specific data points.
 
 from abc import ABC, abstractmethod
 
-from document_extraction_tools.config.extractor_config import BaseExtractorConfig
+from document_extraction_tools.config.base_extractor_config import BaseExtractorConfig
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.schema import ExtractionSchema
 

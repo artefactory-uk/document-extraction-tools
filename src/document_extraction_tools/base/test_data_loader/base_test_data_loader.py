@@ -7,7 +7,7 @@ Test Data Loaders are responsible for loading evaluation test examples from a sp
 from abc import ABC, abstractmethod
 from typing import Generic
 
-from document_extraction_tools.config.test_data_loader_config import (
+from document_extraction_tools.config.base_test_data_loader_config import (
     BaseTestDataLoaderConfig,
 )
 from document_extraction_tools.types.path_identifier import PathIdentifier

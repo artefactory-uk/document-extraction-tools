@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from document_extraction_tools.config.evaluation_exporter_config import (
+from document_extraction_tools.config.base_evaluation_exporter_config import (
     BaseEvaluationExporterConfig,
 )
 from document_extraction_tools.types.path_identifier import PathIdentifier

@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from document_extraction_tools.config.converter_config import BaseConverterConfig
+from document_extraction_tools.config.base_converter_config import BaseConverterConfig
 
 
 class ConverterConfig(BaseConverterConfig):

@@ -2,7 +2,9 @@
 
 from pydantic import Field
 
-from document_extraction_tools.config.file_lister_config import BaseFileListerConfig
+from document_extraction_tools.config.base_file_lister_config import (
+    BaseFileListerConfig,
+)
 
 
 class FileListerConfig(BaseFileListerConfig):

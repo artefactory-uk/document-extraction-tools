@@ -7,7 +7,7 @@ and persisting it to a target destination.
 
 from abc import ABC, abstractmethod
 
-from document_extraction_tools.config.extraction_exporter_config import (
+from document_extraction_tools.config.base_extraction_exporter_config import (
     BaseExtractionExporterConfig,
 )
 from document_extraction_tools.types.document import Document

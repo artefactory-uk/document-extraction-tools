@@ -8,7 +8,7 @@ predicted data against ground-truth data.
 from abc import ABC, abstractmethod
 from typing import Generic
 
-from document_extraction_tools.config.evaluator_config import BaseEvaluatorConfig
+from document_extraction_tools.config.base_evaluator_config import BaseEvaluatorConfig
 from document_extraction_tools.types.evaluation_result import EvaluationResult
 from document_extraction_tools.types.schema import ExtractionSchema
 
