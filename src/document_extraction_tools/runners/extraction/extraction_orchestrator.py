@@ -1,4 +1,4 @@
-"""Pipeline Orchestrator.
+"""Extraction Orchestrator.
 
 This module contains the logic to coordinate the flow of data through the
 extraction pipeline. It manages parallel processing and asynchronous

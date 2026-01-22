@@ -8,10 +8,11 @@ from document_extraction_tools.config.config_loader import load_evaluation_confi
 from document_extraction_tools.config.evaluation_pipeline_config import (
     EvaluationPipelineConfig,
 )
-from document_extraction_tools.runners.evaluation.orchestrator import (
+from document_extraction_tools.runners.evaluation.evaluation_orchestrator import (
     EvaluationOrchestrator,
 )
 from document_extraction_tools.types.path_identifier import PathIdentifier
+from document_extraction_tools.types.test_example import TestExample
 
 from .components.converter.pdf_to_image_converter import PDFToImageConverter
 from .components.evaluator.accuracy_evaluator import AccuracyEvaluator
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the example evaluation pipeline."""
     # 1. Load Configuration
-    config_path = str(Path(__file__).parent / "config")
+    config_path = Path(__file__).parent / "config"
     cfg: EvaluationPipelineConfig = load_evaluation_config(
         config_dir=config_path,
         test_data_loader_cls=TestDataLoaderConfig,
@@ -50,7 +51,7 @@ def main() -> None:
     logger.info("Configuration loaded successfully.")
 
     # 2. Initialize Orchestrator
-    orchestrator = EvaluationOrchestrator.from_config(
+    orchestrator: EvaluationOrchestrator = EvaluationOrchestrator.from_config(
         config=cfg,
         schema=SimpleLeaseDetails,
         reader_cls=LocalFileReader,
@@ -63,7 +64,9 @@ def main() -> None:
 
     # 3. Load Evaluation Examples
     loader_path = PathIdentifier(path=cfg.test_data_loader.test_data.path)
-    examples = orchestrator.test_data_loader.load_test_data(loader_path)
+    examples: list[TestExample] = orchestrator.test_data_loader.load_test_data(
+        loader_path
+    )
 
     logger.info(f"Loaded {len(examples)} evaluation examples.")
 

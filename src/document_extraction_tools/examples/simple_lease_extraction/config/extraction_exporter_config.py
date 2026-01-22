@@ -1,4 +1,4 @@
-"""Configuration for the example exporter."""
+"""Configuration for the example extraction exporter."""
 
 from pydantic import Field
 

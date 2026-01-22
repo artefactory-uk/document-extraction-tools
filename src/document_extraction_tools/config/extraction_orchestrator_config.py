@@ -1,4 +1,4 @@
-"""Configuration for the Orchestrator component."""
+"""Configuration for the Extraction Orchestrator component."""
 
 from typing import ClassVar
 

@@ -8,7 +8,7 @@ from document_extraction_tools.config.config_loader import load_config
 from document_extraction_tools.config.extraction_pipeline_config import (
     ExtractionPipelineConfig,
 )
-from document_extraction_tools.runners.extraction.orchestrator import (
+from document_extraction_tools.runners.extraction.extraction_orchestrator import (
     ExtractionOrchestrator,
 )
 from document_extraction_tools.types.path_identifier import PathIdentifier
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the example extraction pipeline."""
     # 1. Load Configuration
-    config_path = str(Path(__file__).parent / "config")
+    config_path = Path(__file__).parent / "config"
     cfg: ExtractionPipelineConfig = load_config(
         config_dir=config_path,
         lister_cls=FileListerConfig,
@@ -59,7 +59,7 @@ def main() -> None:
     )
 
     # 3. List Files to Process
-    lister: LocalFileLister = LocalFileLister(cfg.file_lister)
+    lister = LocalFileLister(cfg.file_lister)
     files: list[PathIdentifier] = lister.list_files()
 
     logger.info(f"Found {len(files)} files to process.")

@@ -1,4 +1,10 @@
-"""Evaluation orchestrator for running metrics over test data."""
+"""Evaluation orchestrator.
+
+This module defines the EvaluationOrchestrator class, which coordinates
+the evaluation of extraction models against ground-truth data using multiple
+evaluators. It handles loading test examples, reading and converting documents,
+running extraction, applying evaluators, and exporting results.
+"""
 
 from __future__ import annotations
 

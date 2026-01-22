@@ -56,7 +56,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def load_config(
-    config_dir: str = "config",
+    config_dir: Path = Path("config"),
     orchestrator_cls: type[ExtractionOrchestratorConfig] = ExtractionOrchestratorConfig,
     lister_cls: type[BaseFileListerConfig] = BaseFileListerConfig,
     reader_cls: type[BaseReaderConfig] = BaseReaderConfig,
@@ -67,7 +67,7 @@ def load_config(
     """Loads configuration based on a mapping file.
 
     Args:
-        config_dir (str): Directory containing the configs.
+        config_dir (Path): Directory containing the configs.
         orchestrator_cls (type[ExtractionOrchestratorConfig]): The ExtractionOrchestratorConfig subclass to use.
         lister_cls (type[BaseFileListerConfig]): The FileListerConfig subclass to use.
         reader_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
@@ -81,24 +81,23 @@ def load_config(
     Raises:
         FileNotFoundError: If the config directory or mapping file is missing.
     """
-    base_dir = Path(config_dir)
-    if not base_dir.exists():
-        raise FileNotFoundError(f"Config directory not found: {base_dir.absolute()}")
+    if not config_dir.exists():
+        raise FileNotFoundError(f"Config directory not found: {config_dir.absolute()}")
 
     return ExtractionPipelineConfig(
         orchestrator=orchestrator_cls(
-            **_load_yaml(base_dir / orchestrator_cls.filename)
+            **_load_yaml(config_dir / orchestrator_cls.filename)
         ),
-        file_lister=lister_cls(**_load_yaml(base_dir / lister_cls.filename)),
-        reader=reader_cls(**_load_yaml(base_dir / reader_cls.filename)),
-        converter=converter_cls(**_load_yaml(base_dir / converter_cls.filename)),
-        extractor=extractor_cls(**_load_yaml(base_dir / extractor_cls.filename)),
-        exporter=exporter_cls(**_load_yaml(base_dir / exporter_cls.filename)),
+        file_lister=lister_cls(**_load_yaml(config_dir / lister_cls.filename)),
+        reader=reader_cls(**_load_yaml(config_dir / reader_cls.filename)),
+        converter=converter_cls(**_load_yaml(config_dir / converter_cls.filename)),
+        extractor=extractor_cls(**_load_yaml(config_dir / extractor_cls.filename)),
+        exporter=exporter_cls(**_load_yaml(config_dir / exporter_cls.filename)),
     )
 
 
 def load_evaluation_config(
-    config_dir: str = "config",
+    config_dir: Path = Path("config"),
     orchestrator_cls: type[EvaluationOrchestratorConfig] = EvaluationOrchestratorConfig,
     test_data_loader_cls: type[BaseTestDataLoaderConfig] = BaseTestDataLoaderConfig,
     reader_cls: type[BaseReaderConfig] = BaseReaderConfig,
@@ -111,7 +110,7 @@ def load_evaluation_config(
     """Loads evaluation configuration based on default filenames.
 
     Args:
-        config_dir (str): Directory containing the configs.
+        config_dir (Path): Directory containing the configs.
         orchestrator_cls (type[EvaluationOrchestratorConfig]): The EvaluationOrchestratorConfig subclass to use.
         test_data_loader_cls (type[BaseTestDataLoaderConfig]): The TestDataLoaderConfig subclass to use.
         reader_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
@@ -125,21 +124,20 @@ def load_evaluation_config(
     Raises:
         FileNotFoundError: If the config directory or mapping file is missing.
     """
-    base_dir = Path(config_dir)
-    if not base_dir.exists():
-        raise FileNotFoundError(f"Config directory not found: {base_dir.absolute()}")
+    if not config_dir.exists():
+        raise FileNotFoundError(f"Config directory not found: {config_dir.absolute()}")
 
     return EvaluationPipelineConfig(
         orchestrator=orchestrator_cls(
-            **_load_yaml(base_dir / orchestrator_cls.filename)
+            **_load_yaml(config_dir / orchestrator_cls.filename)
         ),
         test_data_loader=test_data_loader_cls(
-            **_load_yaml(base_dir / test_data_loader_cls.filename)
+            **_load_yaml(config_dir / test_data_loader_cls.filename)
         ),
-        reader=reader_cls(**_load_yaml(base_dir / reader_cls.filename)),
-        converter=converter_cls(**_load_yaml(base_dir / converter_cls.filename)),
-        extractor=extractor_cls(**_load_yaml(base_dir / extractor_cls.filename)),
+        reader=reader_cls(**_load_yaml(config_dir / reader_cls.filename)),
+        converter=converter_cls(**_load_yaml(config_dir / converter_cls.filename)),
+        extractor=extractor_cls(**_load_yaml(config_dir / extractor_cls.filename)),
         evaluation_exporter=evaluation_exporter_cls(
-            **_load_yaml(base_dir / evaluation_exporter_cls.filename)
+            **_load_yaml(config_dir / evaluation_exporter_cls.filename)
         ),
     )

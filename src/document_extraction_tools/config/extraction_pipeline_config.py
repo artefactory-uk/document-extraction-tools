@@ -1,4 +1,4 @@
-"""Master Pipeline Configuration."""
+"""Master Extraction Pipeline Configuration."""
 
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ from document_extraction_tools.config.reader_config import BaseReaderConfig
 
 
 class ExtractionPipelineConfig(BaseModel):
-    """Master container for component configurations.
+    """Master container for extraction pipeline component configurations.
 
     This class aggregates the configurations for all pipeline components.
     """

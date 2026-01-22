@@ -1,7 +1,7 @@
-"""Abstract Base Class for Data Exporters.
+"""Abstract Base Class for Extraction Exporters.
 
 This module defines the interface that all exporter implementations must satisfy.
-Exporters are responsible for taking the extracted, structured Pydantic data
+Extraction Exporters are responsible for taking the extracted, structured Pydantic data
 and persisting it to a target destination.
 """
 

@@ -1,4 +1,4 @@
-"""Configuration for Exporter components."""
+"""Configuration for Extraction Exporter components."""
 
 from typing import ClassVar
 
