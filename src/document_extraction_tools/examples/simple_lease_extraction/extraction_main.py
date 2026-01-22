@@ -5,6 +5,9 @@ import logging
 from pathlib import Path
 
 from document_extraction_tools.config.config_loader import load_config
+from document_extraction_tools.config.extraction_orchestrator_config import (
+    ExtractionOrchestratorConfig,
+)
 from document_extraction_tools.config.extraction_pipeline_config import (
     ExtractionPipelineConfig,
 )
@@ -39,11 +42,12 @@ def main() -> None:
     config_path = Path(__file__).parent / "config"
     cfg: ExtractionPipelineConfig = load_config(
         config_dir=config_path,
-        lister_cls=FileListerConfig,
-        reader_cls=ReaderConfig,
-        converter_cls=ConverterConfig,
-        extractor_cls=ExtractorConfig,
-        exporter_cls=ExporterConfig,
+        orchestrator_config_cls=ExtractionOrchestratorConfig,
+        lister_config_cls=FileListerConfig,
+        reader_config_cls=ReaderConfig,
+        converter_config_cls=ConverterConfig,
+        extractor_config_cls=ExtractorConfig,
+        exporter_config_cls=ExporterConfig,
     )
 
     logger.info("Configuration loaded successfully.")

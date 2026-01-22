@@ -9,6 +9,7 @@ from document_extraction_tools.config.evaluation_exporter_config import (
 from document_extraction_tools.config.evaluation_orchestrator_config import (
     EvaluationOrchestratorConfig,
 )
+from document_extraction_tools.config.evaluator_config import BaseEvaluatorConfig
 from document_extraction_tools.config.extractor_config import BaseExtractorConfig
 from document_extraction_tools.config.reader_config import BaseReaderConfig
 from document_extraction_tools.config.test_data_loader_config import (
@@ -24,6 +25,7 @@ class EvaluationPipelineConfig(BaseModel):
 
     orchestrator: EvaluationOrchestratorConfig
     test_data_loader: BaseTestDataLoaderConfig
+    evaluators: list[BaseEvaluatorConfig]
     reader: BaseReaderConfig
     converter: BaseConverterConfig
     extractor: BaseExtractorConfig

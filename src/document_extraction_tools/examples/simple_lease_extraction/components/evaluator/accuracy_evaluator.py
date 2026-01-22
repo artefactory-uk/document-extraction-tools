@@ -1,6 +1,9 @@
 """Accuracy evaluator for the example schema."""
 
 from document_extraction_tools.base.evaluator.evaluator import BaseEvaluator
+from document_extraction_tools.examples.simple_lease_extraction.config.evaluator_config import (
+    AccuracyEvaluatorConfig,
+)
 from document_extraction_tools.examples.simple_lease_extraction.schema.schema import (
     SimpleLeaseDetails,
 )
@@ -9,6 +12,10 @@ from document_extraction_tools.types.evaluation_result import EvaluationResult
 
 class AccuracyEvaluator(BaseEvaluator[SimpleLeaseDetails]):
     """Computes field-level exact match accuracy."""
+
+    def __init__(self, config: AccuracyEvaluatorConfig) -> None:
+        """Initialize the accuracy evaluator with a configuration."""
+        super().__init__(config)
 
     def evaluate(
         self, true: SimpleLeaseDetails, pred: SimpleLeaseDetails

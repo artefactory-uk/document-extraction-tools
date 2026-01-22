@@ -16,6 +16,7 @@ from document_extraction_tools.config.evaluation_orchestrator_config import (
 from document_extraction_tools.config.evaluation_pipeline_config import (
     EvaluationPipelineConfig,
 )
+from document_extraction_tools.config.evaluator_config import BaseEvaluatorConfig
 from document_extraction_tools.config.extraction_exporter_config import (
     BaseExtractionExporterConfig,
 )
@@ -56,24 +57,26 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def load_config(
+    lister_config_cls: type[BaseFileListerConfig],
+    reader_config_cls: type[BaseReaderConfig],
+    converter_config_cls: type[BaseConverterConfig],
+    extractor_config_cls: type[BaseExtractorConfig],
+    exporter_config_cls: type[BaseExtractionExporterConfig],
+    orchestrator_config_cls: type[
+        ExtractionOrchestratorConfig
+    ] = ExtractionOrchestratorConfig,
     config_dir: Path = Path("config"),
-    orchestrator_cls: type[ExtractionOrchestratorConfig] = ExtractionOrchestratorConfig,
-    lister_cls: type[BaseFileListerConfig] = BaseFileListerConfig,
-    reader_cls: type[BaseReaderConfig] = BaseReaderConfig,
-    converter_cls: type[BaseConverterConfig] = BaseConverterConfig,
-    extractor_cls: type[BaseExtractorConfig] = BaseExtractorConfig,
-    exporter_cls: type[BaseExtractionExporterConfig] = BaseExtractionExporterConfig,
 ) -> ExtractionPipelineConfig:
     """Loads configuration based on a mapping file.
 
     Args:
+        lister_config_cls (type[BaseFileListerConfig]): The FileListerConfig subclass to use.
+        reader_config_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
+        converter_config_cls (type[BaseConverterConfig]): The ConverterConfig subclass to use.
+        extractor_config_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
+        exporter_config_cls (type[BaseExtractionExporterConfig]): The ExporterConfig subclass to use.
+        orchestrator_config_cls (type[ExtractionOrchestratorConfig]): The ExtractionOrchestratorConfig class to use.
         config_dir (Path): Directory containing the configs.
-        orchestrator_cls (type[ExtractionOrchestratorConfig]): The ExtractionOrchestratorConfig subclass to use.
-        lister_cls (type[BaseFileListerConfig]): The FileListerConfig subclass to use.
-        reader_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
-        converter_cls (type[BaseConverterConfig]): The ConverterConfig subclass to use.
-        extractor_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
-        exporter_cls (type[BaseExtractionExporterConfig]): The ExporterConfig subclass to use.
 
     Returns:
         ExtractionPipelineConfig: The fully validated configuration.
@@ -85,38 +88,50 @@ def load_config(
         raise FileNotFoundError(f"Config directory not found: {config_dir.absolute()}")
 
     return ExtractionPipelineConfig(
-        orchestrator=orchestrator_cls(
-            **_load_yaml(config_dir / orchestrator_cls.filename)
+        orchestrator=orchestrator_config_cls(
+            **_load_yaml(config_dir / orchestrator_config_cls.filename)
         ),
-        file_lister=lister_cls(**_load_yaml(config_dir / lister_cls.filename)),
-        reader=reader_cls(**_load_yaml(config_dir / reader_cls.filename)),
-        converter=converter_cls(**_load_yaml(config_dir / converter_cls.filename)),
-        extractor=extractor_cls(**_load_yaml(config_dir / extractor_cls.filename)),
-        exporter=exporter_cls(**_load_yaml(config_dir / exporter_cls.filename)),
+        file_lister=lister_config_cls(
+            **_load_yaml(config_dir / lister_config_cls.filename)
+        ),
+        reader=reader_config_cls(**_load_yaml(config_dir / reader_config_cls.filename)),
+        converter=converter_config_cls(
+            **_load_yaml(config_dir / converter_config_cls.filename)
+        ),
+        extractor=extractor_config_cls(
+            **_load_yaml(config_dir / extractor_config_cls.filename)
+        ),
+        exporter=exporter_config_cls(
+            **_load_yaml(config_dir / exporter_config_cls.filename)
+        ),
     )
 
 
 def load_evaluation_config(
+    test_data_loader_config_cls: type[BaseTestDataLoaderConfig],
+    evaluator_config_classes: list[type[BaseEvaluatorConfig]],
+    reader_config_cls: type[BaseReaderConfig],
+    converter_config_cls: type[BaseConverterConfig],
+    extractor_config_cls: type[BaseExtractorConfig],
+    evaluation_exporter_config_cls: type[BaseEvaluationExporterConfig],
+    orchestrator_config_cls: type[
+        EvaluationOrchestratorConfig
+    ] = EvaluationOrchestratorConfig,
     config_dir: Path = Path("config"),
-    orchestrator_cls: type[EvaluationOrchestratorConfig] = EvaluationOrchestratorConfig,
-    test_data_loader_cls: type[BaseTestDataLoaderConfig] = BaseTestDataLoaderConfig,
-    reader_cls: type[BaseReaderConfig] = BaseReaderConfig,
-    converter_cls: type[BaseConverterConfig] = BaseConverterConfig,
-    extractor_cls: type[BaseExtractorConfig] = BaseExtractorConfig,
-    evaluation_exporter_cls: type[
-        BaseEvaluationExporterConfig
-    ] = BaseEvaluationExporterConfig,
 ) -> EvaluationPipelineConfig:
     """Loads evaluation configuration based on default filenames.
 
     Args:
+        test_data_loader_config_cls (type[BaseTestDataLoaderConfig]): The TestDataLoaderConfig subclass to use.
+        evaluator_config_classes (list[type[BaseEvaluatorConfig]]): EvaluatorConfig
+            subclasses to load using their filenames.
+        reader_config_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
+        converter_config_cls (type[BaseConverterConfig]): The ConverterConfig subclass to use.
+        extractor_config_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
+        evaluation_exporter_config_cls (type[BaseEvaluationExporterConfig]): The EvaluationExporterConfig
+            subclass to use.
+        orchestrator_config_cls (type[EvaluationOrchestratorConfig]): The EvaluationOrchestratorConfig class to use.
         config_dir (Path): Directory containing the configs.
-        orchestrator_cls (type[EvaluationOrchestratorConfig]): The EvaluationOrchestratorConfig subclass to use.
-        test_data_loader_cls (type[BaseTestDataLoaderConfig]): The TestDataLoaderConfig subclass to use.
-        reader_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
-        converter_cls (type[BaseConverterConfig]): The ConverterConfig subclass to use.
-        extractor_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
-        evaluation_exporter_cls (type[BaseEvaluationExporterConfig]): The EvaluationExporterConfig subclass to use.
 
     Returns:
         EvaluationPipelineConfig: The fully validated configuration.
@@ -128,16 +143,42 @@ def load_evaluation_config(
         raise FileNotFoundError(f"Config directory not found: {config_dir.absolute()}")
 
     return EvaluationPipelineConfig(
-        orchestrator=orchestrator_cls(
-            **_load_yaml(config_dir / orchestrator_cls.filename)
+        orchestrator=orchestrator_config_cls(
+            **_load_yaml(config_dir / orchestrator_config_cls.filename)
         ),
-        test_data_loader=test_data_loader_cls(
-            **_load_yaml(config_dir / test_data_loader_cls.filename)
+        test_data_loader=test_data_loader_config_cls(
+            **_load_yaml(config_dir / test_data_loader_config_cls.filename)
         ),
-        reader=reader_cls(**_load_yaml(config_dir / reader_cls.filename)),
-        converter=converter_cls(**_load_yaml(config_dir / converter_cls.filename)),
-        extractor=extractor_cls(**_load_yaml(config_dir / extractor_cls.filename)),
-        evaluation_exporter=evaluation_exporter_cls(
-            **_load_yaml(config_dir / evaluation_exporter_cls.filename)
+        evaluators=_load_evaluator_configs(config_dir, evaluator_config_classes),
+        reader=reader_config_cls(**_load_yaml(config_dir / reader_config_cls.filename)),
+        converter=converter_config_cls(
+            **_load_yaml(config_dir / converter_config_cls.filename)
+        ),
+        extractor=extractor_config_cls(
+            **_load_yaml(config_dir / extractor_config_cls.filename)
+        ),
+        evaluation_exporter=evaluation_exporter_config_cls(
+            **_load_yaml(config_dir / evaluation_exporter_config_cls.filename)
         ),
     )
+
+
+def _load_evaluator_configs(
+    config_dir: Path, evaluator_config_classes: list[type[BaseEvaluatorConfig]]
+) -> list[BaseEvaluatorConfig]:
+    """Helper to load multiple evaluator configs.
+
+    Args:
+        config_dir (Path): Directory containing the configs.
+        evaluator_config_classes (list[type[BaseEvaluatorConfig]]): EvaluatorConfig
+            subclasses to load using their filenames.
+
+    Returns:
+        list[BaseEvaluatorConfig]: The loaded evaluator configurations.
+    """
+    evaluators: list[BaseEvaluatorConfig] = []
+    for evaluator_cls in evaluator_config_classes:
+        evaluators.append(
+            evaluator_cls(**_load_yaml(config_dir / evaluator_cls.filename))
+        )
+    return evaluators

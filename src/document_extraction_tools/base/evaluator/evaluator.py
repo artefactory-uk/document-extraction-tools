@@ -8,6 +8,7 @@ predicted data against ground-truth data.
 from abc import ABC, abstractmethod
 from typing import Generic
 
+from document_extraction_tools.config.evaluator_config import BaseEvaluatorConfig
 from document_extraction_tools.types.evaluation_result import EvaluationResult
 from document_extraction_tools.types.schema import ExtractionSchema
 
@@ -15,7 +16,14 @@ from document_extraction_tools.types.schema import ExtractionSchema
 class BaseEvaluator(ABC, Generic[ExtractionSchema]):
     """Abstract interface for evaluation metrics."""
 
-    # TODO: Add name in init and config based on the name to init params like llm etc.
+    def __init__(self, config: BaseEvaluatorConfig) -> None:
+        """Initialize with a configuration object.
+
+        Args:
+            config (BaseEvaluatorConfig): Configuration specific to the evaluator implementation.
+        """
+        self.config = config
+
     @abstractmethod
     def evaluate(
         self, true: ExtractionSchema, pred: ExtractionSchema

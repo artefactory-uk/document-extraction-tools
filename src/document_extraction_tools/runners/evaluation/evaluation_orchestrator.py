@@ -81,7 +81,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         converter_cls: type[BaseConverter],
         extractor_cls: type[BaseExtractor],
         test_data_loader_cls: type[BaseTestDataLoader[ExtractionSchema]],
-        evaluators: Iterable[BaseEvaluator[ExtractionSchema]],
+        evaluator_classes: list[type[BaseEvaluator[ExtractionSchema]]],
         evaluation_exporter_cls: type[BaseEvaluationExporter],
     ) -> EvaluationOrchestrator[ExtractionSchema]:
         """Factory method to create an EvaluationOrchestrator from config.
@@ -94,8 +94,8 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             extractor_cls (type[BaseExtractor]): The concrete Extractor class to instantiate.
             test_data_loader_cls (type[BaseTestDataLoader[ExtractionSchema]]): The
                 concrete TestDataLoader class to instantiate.
-            evaluators (Iterable[BaseEvaluator[ExtractionSchema]]): The evaluator
-                instances to apply.
+            evaluator_classes (list[type[BaseEvaluator[ExtractionSchema]]]): The
+                evaluator classes available for instantiation.
             evaluation_exporter_cls (type[BaseEvaluationExporter]): The concrete
                 EvaluationExporter class to instantiate.
 
@@ -109,6 +109,14 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         evaluation_exporter_instance = evaluation_exporter_cls(
             config.evaluation_exporter
         )
+        evaluators = [
+            evaluator_cls(item)
+            for item in config.evaluators
+            for evaluator_cls in evaluator_classes
+            if evaluator_cls.__name__ == item.evaluator_name
+        ]
+        if not evaluators:
+            raise ValueError("No valid evaluators configured.")
 
         return cls(
             config=config.orchestrator,
