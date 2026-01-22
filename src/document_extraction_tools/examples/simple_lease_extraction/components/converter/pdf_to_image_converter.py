@@ -6,8 +6,8 @@ from pathlib import Path
 from pdf2image import convert_from_bytes  # type: ignore
 
 from document_extraction_tools.base.converter.base_converter import BaseConverter
-from document_extraction_tools.examples.simple_lease_extraction.config.converter_config import (
-    ConverterConfig,
+from document_extraction_tools.examples.simple_lease_extraction.config.pdf_to_image_converter_config import (
+    PDFToImageConverterConfig,
 )
 from document_extraction_tools.types.document import Document, ImageData, Page
 from document_extraction_tools.types.document_bytes import DocumentBytes
@@ -16,7 +16,7 @@ from document_extraction_tools.types.document_bytes import DocumentBytes
 class PDFToImageConverter(BaseConverter):
     """Converts PDF bytes into image pages."""
 
-    def __init__(self, config: ConverterConfig) -> None:
+    def __init__(self, config: PDFToImageConverterConfig) -> None:
         """Initialize converter with example config."""
         super().__init__(config)
         self.dpi = config.dpi

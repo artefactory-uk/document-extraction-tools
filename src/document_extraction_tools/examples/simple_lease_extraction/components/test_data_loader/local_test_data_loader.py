@@ -6,8 +6,8 @@ from pathlib import Path
 from document_extraction_tools.base.test_data_loader.base_test_data_loader import (
     BaseTestDataLoader,
 )
-from document_extraction_tools.examples.simple_lease_extraction.config.test_data_loader_config import (
-    TestDataLoaderConfig,
+from document_extraction_tools.examples.simple_lease_extraction.config.local_test_data_loader_config import (
+    LocalTestDataLoaderConfig,
 )
 from document_extraction_tools.examples.simple_lease_extraction.schema.schema import (
     SimpleLeaseDetails,
@@ -19,25 +19,15 @@ from document_extraction_tools.types.test_example import TestExample
 class LocalTestDataLoader(BaseTestDataLoader[SimpleLeaseDetails]):
     """Loads evaluation examples from a JSON file."""
 
-    def __init__(self, config: TestDataLoaderConfig) -> None:
-        """Initialize with a local test data loader configuration.
-
-        Args:
-            config (TestDataLoaderConfig): Configuration for the local test data loader.
-        """
+    def __init__(self, config: LocalTestDataLoaderConfig) -> None:
+        """Initialize with a local test data loader configuration."""
         super().__init__(config)
         self.config = config
 
     def load_test_data(
         self, path_identifier: PathIdentifier
     ) -> list[TestExample[SimpleLeaseDetails]]:
-        """Load test examples from a JSON file.
-
-        Assumes the JSON file is an array of objects, each containing 'inputs' and 'expectations' fields.
-
-        Args:
-            path_identifier (PathIdentifier): Path to the JSON file containing test data.
-        """
+        """Load test examples from a JSON file."""
         input_path = Path(path_identifier.path)
         if not input_path.exists():
             raise FileNotFoundError(f"Test data not found: {input_path}")

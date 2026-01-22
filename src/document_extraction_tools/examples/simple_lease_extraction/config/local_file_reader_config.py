@@ -1,11 +1,11 @@
-"""Configuration for the example reader."""
+"""Configuration for the local file reader."""
 
 from pydantic import Field
 
 from document_extraction_tools.config.base_reader_config import BaseReaderConfig
 
 
-class ReaderConfig(BaseReaderConfig):
+class LocalFileReaderConfig(BaseReaderConfig):
     """Configuration for local file reading."""
 
     mime_type: str = Field(

@@ -1,4 +1,4 @@
-"""Configuration for the example evaluation exporter."""
+"""Configuration for the local file evaluation exporter."""
 
 from pydantic import Field
 
@@ -8,8 +8,8 @@ from document_extraction_tools.config.base_evaluation_exporter_config import (
 from document_extraction_tools.types.path_identifier import PathIdentifier
 
 
-class EvaluationExporterConfig(BaseEvaluationExporterConfig):
-    """Configuration for evaluation results export."""
+class LocalFileEvaluationExporterConfig(BaseEvaluationExporterConfig):
+    """Configuration for local evaluation results export."""
 
     destination: PathIdentifier = Field(
         ...,

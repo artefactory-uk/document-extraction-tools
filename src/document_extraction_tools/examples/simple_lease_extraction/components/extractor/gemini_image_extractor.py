@@ -8,8 +8,8 @@ from google.genai import types
 from pydantic import BaseModel
 
 from document_extraction_tools.base.extractor.base_extractor import BaseExtractor
-from document_extraction_tools.examples.simple_lease_extraction.config.extractor_config import (
-    ExtractorConfig,
+from document_extraction_tools.examples.simple_lease_extraction.config.gemini_image_extractor_config import (
+    GeminiImageExtractorConfig,
 )
 from document_extraction_tools.types.document import Document, ImageData
 
@@ -17,7 +17,7 @@ from document_extraction_tools.types.document import Document, ImageData
 class GeminiImageExtractor(BaseExtractor):
     """Extracts lease data from images using the Gemini API."""
 
-    def __init__(self, config: ExtractorConfig) -> None:
+    def __init__(self, config: GeminiImageExtractorConfig) -> None:
         """Initialize the extractor and client."""
         super().__init__(config)
 

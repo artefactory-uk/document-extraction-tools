@@ -23,11 +23,13 @@ from .components.exporter.local_file_extraction_exporter import (
 from .components.extractor.gemini_image_extractor import GeminiImageExtractor
 from .components.file_lister.local_file_lister import LocalFileLister
 from .components.reader.local_file_reader import LocalFileReader
-from .config.converter_config import ConverterConfig
-from .config.extraction_exporter_config import ExporterConfig
-from .config.extractor_config import ExtractorConfig
-from .config.file_lister_config import FileListerConfig
-from .config.reader_config import ReaderConfig
+from .config.gemini_image_extractor_config import GeminiImageExtractorConfig
+from .config.local_file_extraction_exporter_config import (
+    LocalFileExtractionExporterConfig,
+)
+from .config.local_file_lister_config import LocalFileListerConfig
+from .config.local_file_reader_config import LocalFileReaderConfig
+from .config.pdf_to_image_converter_config import PDFToImageConverterConfig
 from .schema.schema import SimpleLeaseDetails
 
 logging.basicConfig(
@@ -43,11 +45,11 @@ def main() -> None:
     cfg: ExtractionPipelineConfig = load_config(
         config_dir=config_path,
         orchestrator_config_cls=ExtractionOrchestratorConfig,
-        lister_config_cls=FileListerConfig,
-        reader_config_cls=ReaderConfig,
-        converter_config_cls=ConverterConfig,
-        extractor_config_cls=ExtractorConfig,
-        exporter_config_cls=ExporterConfig,
+        lister_config_cls=LocalFileListerConfig,
+        reader_config_cls=LocalFileReaderConfig,
+        converter_config_cls=PDFToImageConverterConfig,
+        extractor_config_cls=GeminiImageExtractorConfig,
+        exporter_config_cls=LocalFileExtractionExporterConfig,
     )
 
     logger.info("Configuration loaded successfully.")

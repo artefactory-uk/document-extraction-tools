@@ -26,12 +26,14 @@ from .components.exporter.local_file_evaluation_exporter import (
 from .components.extractor.gemini_image_extractor import GeminiImageExtractor
 from .components.reader.local_file_reader import LocalFileReader
 from .components.test_data_loader.local_test_data_loader import LocalTestDataLoader
-from .config.converter_config import ConverterConfig
-from .config.evaluation_exporter_config import EvaluationExporterConfig
 from .config.evaluator_config import AccuracyEvaluatorConfig, F1EvaluatorConfig
-from .config.extractor_config import ExtractorConfig
-from .config.reader_config import ReaderConfig
-from .config.test_data_loader_config import TestDataLoaderConfig
+from .config.gemini_image_extractor_config import GeminiImageExtractorConfig
+from .config.local_file_evaluation_exporter_config import (
+    LocalFileEvaluationExporterConfig,
+)
+from .config.local_file_reader_config import LocalFileReaderConfig
+from .config.local_test_data_loader_config import LocalTestDataLoaderConfig
+from .config.pdf_to_image_converter_config import PDFToImageConverterConfig
 from .schema.schema import SimpleLeaseDetails
 
 logging.basicConfig(
@@ -47,12 +49,12 @@ def main() -> None:
     cfg: EvaluationPipelineConfig = load_evaluation_config(
         config_dir=config_path,
         orchestrator_config_cls=EvaluationOrchestratorConfig,
-        test_data_loader_config_cls=TestDataLoaderConfig,
+        test_data_loader_config_cls=LocalTestDataLoaderConfig,
         evaluator_config_classes=[AccuracyEvaluatorConfig, F1EvaluatorConfig],
-        reader_config_cls=ReaderConfig,
-        converter_config_cls=ConverterConfig,
-        extractor_config_cls=ExtractorConfig,
-        evaluation_exporter_config_cls=EvaluationExporterConfig,
+        reader_config_cls=LocalFileReaderConfig,
+        converter_config_cls=PDFToImageConverterConfig,
+        extractor_config_cls=GeminiImageExtractorConfig,
+        evaluation_exporter_config_cls=LocalFileEvaluationExporterConfig,
     )
 
     logger.info("Configuration loaded successfully.")

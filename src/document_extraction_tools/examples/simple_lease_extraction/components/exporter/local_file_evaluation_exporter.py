@@ -7,8 +7,8 @@ import aiofiles
 from document_extraction_tools.base.exporter.base_evaluation_exporter import (
     BaseEvaluationExporter,
 )
-from document_extraction_tools.examples.simple_lease_extraction.config.evaluation_exporter_config import (
-    EvaluationExporterConfig,
+from document_extraction_tools.examples.simple_lease_extraction.config.local_file_evaluation_exporter_config import (
+    LocalFileEvaluationExporterConfig,
 )
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.evaluation_result import EvaluationResult
@@ -17,7 +17,7 @@ from document_extraction_tools.types.evaluation_result import EvaluationResult
 class LocalFileEvaluationExporter(BaseEvaluationExporter):
     """Writes evaluation results to a local JSON file."""
 
-    def __init__(self, config: EvaluationExporterConfig) -> None:
+    def __init__(self, config: LocalFileEvaluationExporterConfig) -> None:
         """Initialize the local file evaluation exporter."""
         super().__init__(config)
         Path(self.config.destination.path).mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-"""Configuration for the example file lister."""
+"""Configuration for the local file lister."""
 
 from pydantic import Field
 
@@ -7,8 +7,8 @@ from document_extraction_tools.config.base_file_lister_config import (
 )
 
 
-class FileListerConfig(BaseFileListerConfig):
-    """Configuration for file listing."""
+class LocalFileListerConfig(BaseFileListerConfig):
+    """Configuration for local file listing."""
 
     source_dir: str = Field(..., description="Directory to scan for input files.")
     extensions: list[str] = Field(
