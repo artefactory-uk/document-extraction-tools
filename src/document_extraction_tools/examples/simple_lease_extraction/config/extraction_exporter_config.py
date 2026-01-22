@@ -2,11 +2,13 @@
 
 from pydantic import Field
 
-from document_extraction_tools.config.exporter_config import BaseExporterConfig
+from document_extraction_tools.config.extraction_exporter_config import (
+    BaseExtractionExporterConfig,
+)
 from document_extraction_tools.types.path_identifier import PathIdentifier
 
 
-class ExporterConfig(BaseExporterConfig):
+class ExporterConfig(BaseExtractionExporterConfig):
     """Configuration for JSON export."""
 
     destination: PathIdentifier = Field(

@@ -23,7 +23,6 @@ class LocalFileReader(BaseReader):
 
         return DocumentBytes(
             file_bytes=file_path.read_bytes(),
-            filename=file_path.name,
-            original_source=str(file_path.absolute()),
+            path_identifier=path,
             mime_type=self.config.mime_type,
         )

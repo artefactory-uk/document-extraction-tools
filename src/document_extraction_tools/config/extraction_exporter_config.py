@@ -5,10 +5,10 @@ from typing import ClassVar
 from pydantic import BaseModel
 
 
-class BaseExporterConfig(BaseModel):
+class BaseExtractionExporterConfig(BaseModel):
     """Base config for Exporters.
 
     Implementations should subclass this to add specific parameters.
     """
 
-    filename: ClassVar[str] = "exporter.yaml"
+    filename: ClassVar[str] = "extraction_exporter.yaml"

@@ -11,19 +11,26 @@ from concurrent.futures import ProcessPoolExecutor
 from typing import Generic
 
 from document_extraction_tools.base.converter.converter import BaseConverter
-from document_extraction_tools.base.exporter.exporter import BaseExporter
+from document_extraction_tools.base.exporter.extraction_exporter import (
+    BaseExtractionExporter,
+)
 from document_extraction_tools.base.extractor.extractor import BaseExtractor
 from document_extraction_tools.base.reader.reader import BaseReader
-from document_extraction_tools.config.orchestrator_config import OrchestratorConfig
-from document_extraction_tools.config.pipeline_config import PipelineConfig
+from document_extraction_tools.config.extraction_orchestrator_config import (
+    ExtractionOrchestratorConfig,
+)
+from document_extraction_tools.config.extraction_pipeline_config import (
+    ExtractionPipelineConfig,
+)
 from document_extraction_tools.types.document import Document
+from document_extraction_tools.types.document_bytes import DocumentBytes
 from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
 
 logger = logging.getLogger(__name__)
 
 
-class PipelineOrchestrator(Generic[ExtractionSchema]):
+class ExtractionOrchestrator(Generic[ExtractionSchema]):
     """Coordinates the document extraction pipeline.
 
     This class manages the lifecycle of document processing, ensuring that
@@ -34,21 +41,21 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
 
     def __init__(
         self,
-        config: OrchestratorConfig,
+        config: ExtractionOrchestratorConfig,
         reader: BaseReader,
         converter: BaseConverter,
         extractor: BaseExtractor,
-        exporter: BaseExporter,
+        exporter: BaseExtractionExporter,
         schema: type[ExtractionSchema],
     ) -> None:
         """Initialize the orchestrator with pipeline components.
 
         Args:
-            config (OrchestratorConfig): Configuration for the orchestrator.
+            config (ExtractionOrchestratorConfig): Configuration for the orchestrator.
             reader (BaseReader): Component to read raw file bytes.
             converter (BaseConverter): Component to transform bytes into Document objects.
             extractor (BaseExtractor): Component to extract structured data via LLM.
-            exporter (BaseExporter): Component to persist the results.
+            exporter (BaseExtractionExporter): Component to persist the results.
             schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
         """
         self.config = config
@@ -61,25 +68,25 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
     @classmethod
     def from_config(
         cls,
-        config: PipelineConfig,
+        config: ExtractionPipelineConfig,
         schema: type[ExtractionSchema],
         reader_cls: type[BaseReader],
         converter_cls: type[BaseConverter],
         extractor_cls: type[BaseExtractor],
-        exporter_cls: type[BaseExporter],
-    ) -> "PipelineOrchestrator[ExtractionSchema]":
+        exporter_cls: type[BaseExtractionExporter],
+    ) -> "ExtractionOrchestrator[ExtractionSchema]":
         """Factory method to create an Orchestrator from a PipelineConfig.
 
         Args:
-            config (PipelineConfig): The full pipeline configuration.
+            config (ExtractionPipelineConfig): The full pipeline configuration.
             schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
             reader_cls (type[BaseReader]): The concrete Reader class to instantiate.
             converter_cls (type[BaseConverter]): The concrete Converter class to instantiate.
             extractor_cls (type[BaseExtractor]): The concrete Extractor class to instantiate.
-            exporter_cls (type[BaseExporter]): The concrete Exporter class to instantiate.
+            exporter_cls (type[BaseExtractionExporter]): The concrete Exporter class to instantiate.
 
         Returns:
-            PipelineOrchestrator[ExtractionSchema]: The configured orchestrator instance.
+            ExtractionOrchestrator[ExtractionSchema]: The configured orchestrator instance.
         """
         reader_instance = reader_cls(config.reader)
         converter_instance = converter_cls(config.converter)
@@ -109,7 +116,7 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
         Returns:
             Document: The fully parsed document object.
         """
-        doc_bytes = reader.read(path_identifier)
+        doc_bytes: DocumentBytes = reader.read(path_identifier)
         return converter.convert(doc_bytes)
 
     async def process_document(
@@ -131,7 +138,7 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
         """
         loop = asyncio.get_running_loop()
 
-        document = await loop.run_in_executor(
+        document: Document = await loop.run_in_executor(
             pool, self._ingest, path_identifier, self.reader, self.converter
         )
 
@@ -139,7 +146,7 @@ class PipelineOrchestrator(Generic[ExtractionSchema]):
             extracted_data: ExtractionSchema = await self.extractor.extract(
                 document, self.schema
             )
-            await self.exporter.export(extracted_data)
+            await self.exporter.export(document, extracted_data)
 
     async def run(self, file_paths_to_process: list[PathIdentifier]) -> None:
         """Main entry point. Orchestrates the execution of the provided file list.

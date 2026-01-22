@@ -12,7 +12,3 @@ class ExtractorConfig(BaseExtractorConfig):
         default="gemini-3-flash-preview",
         description="Gemini model to use for extraction.",
     )
-    api_key: str | None = Field(
-        default=None,
-        description="Optional API key; prefer GEMINI_API_KEY env var.",
-    )

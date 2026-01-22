@@ -6,6 +6,8 @@ import numpy as np
 from PIL import Image as PILImage
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from document_extraction_tools.types.path_identifier import PathIdentifier
+
 PILImageType: TypeAlias = PILImage.Image
 NumpyArrayType: TypeAlias = np.ndarray
 
@@ -54,7 +56,7 @@ class Document(BaseModel):
         description="Ordered list of pages belonging to this document.",
     )
 
-    source_path: str = Field(
+    path_identifier: PathIdentifier = Field(
         ..., description="Traceability link to the original source."
     )
 

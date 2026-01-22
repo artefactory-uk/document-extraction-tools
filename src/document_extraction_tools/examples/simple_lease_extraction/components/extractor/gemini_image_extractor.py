@@ -1,4 +1,4 @@
-"""Gemini extractor implementation for the example pipeline."""
+"""Gemini extractor implementation using image data for the example pipeline."""
 
 import os
 

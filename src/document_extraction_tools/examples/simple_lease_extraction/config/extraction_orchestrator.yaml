@@ -1,0 +1,2 @@
+max_workers: 4
+max_concurrency: 10

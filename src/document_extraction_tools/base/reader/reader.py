@@ -31,6 +31,6 @@ class BaseReader(ABC):
             path_identifier (PathIdentifier): The identifier for the file.
 
         Returns:
-            DocumentBytes: A standardized container with the filename, raw bytes, and source info.
+            DocumentBytes: A standardized container with raw bytes and source metadata.
         """
         pass

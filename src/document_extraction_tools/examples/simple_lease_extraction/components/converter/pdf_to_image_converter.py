@@ -1,6 +1,7 @@
 """PDF-to-image converter implementation for the example pipeline."""
 
 import io
+from pathlib import Path
 
 from pdf2image import convert_from_bytes  # type: ignore
 
@@ -41,9 +42,15 @@ class PDFToImageConverter(BaseConverter):
                 )
             )
 
+        file_path = (
+            document_bytes.path_identifier.path
+            if isinstance(document_bytes.path_identifier.path, Path)
+            else Path(document_bytes.path_identifier.path)
+        )
+
         return Document(
-            id=document_bytes.filename,
+            id=file_path.stem,
             content_type="image",
-            source_path=document_bytes.original_source,
+            path_identifier=document_bytes.path_identifier,
             pages=pages,
         )
