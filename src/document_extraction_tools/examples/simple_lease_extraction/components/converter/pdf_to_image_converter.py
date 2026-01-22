@@ -42,11 +42,7 @@ class PDFToImageConverter(BaseConverter):
                 )
             )
 
-        file_path = (
-            document_bytes.path_identifier.path
-            if isinstance(document_bytes.path_identifier.path, Path)
-            else Path(document_bytes.path_identifier.path)
-        )
+        file_path = Path(document_bytes.path_identifier.path)
 
         return Document(
             id=file_path.stem,

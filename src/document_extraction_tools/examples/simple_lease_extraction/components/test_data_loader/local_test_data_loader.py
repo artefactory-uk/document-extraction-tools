@@ -51,11 +51,11 @@ class LocalTestDataLoader(BaseTestDataLoader[SimpleLeaseDetails]):
                 raise ValueError("Missing inputs.input_pdf_path in test data entry.")
 
             resolved_path = Path(doc_path)
-            id = resolved_path.stem
+            example_id = resolved_path.stem
 
             examples.append(
                 TestExample(
-                    id=id,
+                    id=example_id,
                     path_identifier=PathIdentifier(path=resolved_path),
                     true=SimpleLeaseDetails.model_validate(expectations),
                 )
