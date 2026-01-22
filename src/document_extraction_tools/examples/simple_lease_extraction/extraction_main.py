@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the example extraction pipeline."""
     # 1. Load Configuration
-    config_path = Path(__file__).parent / "config"
+    config_path = Path(__file__).parent / "config/yaml"
     cfg: ExtractionPipelineConfig = load_config(
         config_dir=config_path,
         orchestrator_config_cls=ExtractionOrchestratorConfig,

@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the example evaluation pipeline."""
     # 1. Load Configuration
-    config_path = Path(__file__).parent / "config"
+    config_path = Path(__file__).parent / "config/yaml"
     cfg: EvaluationPipelineConfig = load_evaluation_config(
         config_dir=config_path,
         orchestrator_config_cls=EvaluationOrchestratorConfig,

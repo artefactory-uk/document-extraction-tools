@@ -65,7 +65,7 @@ def load_config(
     orchestrator_config_cls: type[
         ExtractionOrchestratorConfig
     ] = ExtractionOrchestratorConfig,
-    config_dir: Path = Path("config"),
+    config_dir: Path = Path("config/yaml"),
 ) -> ExtractionPipelineConfig:
     """Loads configuration based on a mapping file.
 
@@ -117,7 +117,7 @@ def load_evaluation_config(
     orchestrator_config_cls: type[
         EvaluationOrchestratorConfig
     ] = EvaluationOrchestratorConfig,
-    config_dir: Path = Path("config"),
+    config_dir: Path = Path("config/yaml"),
 ) -> EvaluationPipelineConfig:
     """Loads evaluation configuration based on default filenames.
 
