@@ -6,7 +6,6 @@ concurrency to maximize throughput.
 """
 
 import asyncio
-import logging
 from concurrent.futures import ProcessPoolExecutor
 from typing import Generic
 
@@ -26,8 +25,6 @@ from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.document_bytes import DocumentBytes
 from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
-
-logger = logging.getLogger(__name__)
 
 
 class ExtractionOrchestrator(Generic[ExtractionSchema]):
@@ -163,4 +160,4 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
                 for path_identifier in file_paths_to_process
             ]
 
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)

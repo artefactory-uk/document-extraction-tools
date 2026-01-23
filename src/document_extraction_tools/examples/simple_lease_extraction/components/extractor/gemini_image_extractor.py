@@ -37,6 +37,10 @@ class GeminiImageExtractor(BaseExtractor):
         self.client = genai.Client(api_key=api_key)
         self.model_name = config.model_name
 
+        self.prompt = mlflow.genai.load_prompt(
+            f"prompts:/{self.config.mlflow_prompt_name}/{self.config.mlflow_prompt_version}"
+        ).format()
+
     @retry(
         retry=retry_if_exception_type(ServerError),
         wait=wait_exponential(multiplier=2, min=4, max=60),
@@ -45,13 +49,14 @@ class GeminiImageExtractor(BaseExtractor):
     @mlflow.trace(name="extract_from_images", span_type="LLM")
     async def extract(self, document: Document, schema: type[BaseModel]) -> BaseModel:
         """Run extraction against the Gemini API."""
+        span = mlflow.get_current_active_span()
+        if span:
+            span.set_inputs({"prompt": self.prompt, "model_name": self.model_name})
+
         contents = []
 
         # 1. Add Text Prompt
-        prompt = mlflow.genai.load_prompt(
-            f"prompts:/{self.config.mlflow_prompt_name}/{self.config.mlflow_prompt_version}"
-        )
-        contents.append(prompt.format())
+        contents.append(self.prompt)
 
         # 2. Add Images
         for page in document.pages:

@@ -196,4 +196,4 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
                 self.process_example(example, pool, semaphore) for example in examples
             ]
 
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)
