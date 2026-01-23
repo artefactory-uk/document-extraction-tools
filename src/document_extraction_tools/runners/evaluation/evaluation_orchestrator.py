@@ -9,8 +9,9 @@ running extraction, applying evaluators, and exporting results.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Iterable
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from typing import Generic
 
 from document_extraction_tools.base.converter.base_converter import BaseConverter
@@ -35,6 +36,8 @@ from document_extraction_tools.types.evaluation_result import EvaluationResult
 from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
 from document_extraction_tools.types.test_example import TestExample
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluationOrchestrator(Generic[ExtractionSchema]):
@@ -151,14 +154,14 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
     async def process_example(
         self,
         example: TestExample[ExtractionSchema],
-        pool: ProcessPoolExecutor,
+        pool: ThreadPoolExecutor,
         semaphore: asyncio.Semaphore,
     ) -> None:
         """Runs extraction, evaluation, and export for a single example.
 
         Args:
             example (TestExample[ExtractionSchema]): The test example to process.
-            pool (ProcessPoolExecutor): The process pool for CPU-bound tasks.
+            pool (ThreadPoolExecutor): The thread pool for CPU-bound tasks.
             semaphore (asyncio.Semaphore): Semaphore to limit concurrency.
         """
         loop = asyncio.get_running_loop()
@@ -179,6 +182,8 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             )
             await self.exporter.export(document, results)
 
+            logger.info("Completed evaluation for %s", document.id)
+
     async def run(
         self,
         examples: list[TestExample[ExtractionSchema]],
@@ -190,10 +195,17 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         """
         semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
-        with ProcessPoolExecutor(max_workers=self.config.max_workers) as pool:
+        with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
 
             tasks = [
                 self.process_example(example, pool, semaphore) for example in examples
             ]
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for example, result in zip(examples, results, strict=True):
+                if isinstance(result, Exception):
+                    logger.error(
+                        "Evaluation pipeline failed for %s",
+                        example.path_identifier,
+                        exc_info=result,
+                    )

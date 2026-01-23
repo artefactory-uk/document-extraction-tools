@@ -6,7 +6,8 @@ concurrency to maximize throughput.
 """
 
 import asyncio
-from concurrent.futures import ProcessPoolExecutor
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Generic
 
 from document_extraction_tools.base.converter.base_converter import BaseConverter
@@ -26,14 +27,16 @@ from document_extraction_tools.types.document_bytes import DocumentBytes
 from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
 
+logger = logging.getLogger(__name__)
+
 
 class ExtractionOrchestrator(Generic[ExtractionSchema]):
     """Coordinates the document extraction pipeline.
 
     This class manages the lifecycle of document processing, ensuring that
-    CPU-bound tasks (Reading/Converting) are offloaded to separate processes
-    while I/O-bound tasks (Extracting/Exporting) run concurrently in the
-    async event loop.
+    CPU-bound tasks (Reading/Converting) are offloaded to a thread pool while
+    I/O-bound tasks (Extracting/Exporting) run concurrently in the async event
+    loop.
     """
 
     def __init__(
@@ -119,18 +122,18 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
     async def process_document(
         self,
         path_identifier: PathIdentifier,
-        pool: ProcessPoolExecutor,
+        pool: ThreadPoolExecutor,
         semaphore: asyncio.Semaphore,
     ) -> None:
         """Runs the full processing lifecycle for a single document.
 
-        1. Ingest (Read+Convert) -> Offloaded to ProcessPool (CPU).
+        1. Ingest (Read+Convert) -> Offloaded to ThreadPool (CPU).
         2. Extract -> Async Wait (I/O).
         3. Export -> Async Wait (I/O).
 
         Args:
             path_identifier (PathIdentifier): The input file to process.
-            pool (ProcessPoolExecutor): The shared pool for CPU tasks.
+            pool (ThreadPoolExecutor): The shared pool for CPU tasks.
             semaphore (asyncio.Semaphore): The shared limiter for I/O tasks.
         """
         loop = asyncio.get_running_loop()
@@ -145,6 +148,8 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
             )
             await self.exporter.export(document, extracted_data)
 
+            logger.info("Completed extraction for %s", document.id)
+
     async def run(self, file_paths_to_process: list[PathIdentifier]) -> None:
         """Main entry point. Orchestrates the execution of the provided file list.
 
@@ -153,11 +158,20 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
         """
         semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
-        with ProcessPoolExecutor(max_workers=self.config.max_workers) as pool:
+        with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
 
             tasks = [
                 self.process_document(path_identifier, pool, semaphore)
                 for path_identifier in file_paths_to_process
             ]
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for path_identifier, result in zip(
+                file_paths_to_process, results, strict=True
+            ):
+                if isinstance(result, Exception):
+                    logger.error(
+                        "Extraction pipeline failed for %s",
+                        path_identifier,
+                        exc_info=result,
+                    )

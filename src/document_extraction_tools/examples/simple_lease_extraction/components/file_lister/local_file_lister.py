@@ -23,6 +23,10 @@ class LocalFileLister(BaseFileLister):
     @mlflow.trace(name="list_files", span_type="RETRIEVER")
     def list_files(self) -> list[PathIdentifier]:
         """Return PathIdentifier entries for matching files."""
+        span = mlflow.get_current_active_span()
+        if span:
+            span.set_inputs({"source_dir": str(self.source_dir)})
+
         if not self.source_dir.exists():
             raise FileNotFoundError(
                 f"Source directory {self.source_dir} does not exist."

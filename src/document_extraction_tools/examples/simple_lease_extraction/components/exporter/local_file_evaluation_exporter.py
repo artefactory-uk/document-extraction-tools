@@ -26,6 +26,15 @@ class LocalFileEvaluationExporter(BaseEvaluationExporter):
     @mlflow.trace(name="export_evaluation_results", span_type="MEMORY")
     async def export(self, document: Document, results: list[EvaluationResult]) -> None:
         """Export evaluation results to local JSON files."""
+        span = mlflow.get_current_active_span()
+        if span:
+            span.set_inputs(
+                {
+                    "document_id": document.id,
+                    "results": [result.model_dump() for result in results],
+                }
+            )
+
         for result in results:
             filename = f"{result.name}_{document.id}"
             out_path = Path(self.config.destination.path) / f"{filename}.json"

@@ -33,6 +33,7 @@ from .config.local_file_lister_config import LocalFileListerConfig
 from .config.local_file_reader_config import LocalFileReaderConfig
 from .config.pdf_to_image_converter_config import PDFToImageConverterConfig
 from .schema.schema import SimpleLeaseDetails
+from .utils.mlflow_utils import setup_mlflow
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -74,7 +75,7 @@ def run_extraction_pipeline(config_dir: Path) -> dict[str, int]:
     lister = LocalFileLister(cfg.file_lister)
     files: list[PathIdentifier] = lister.list_files()
 
-    logger.info(f"Found {len(files)} files to process.")
+    logger.info("Found %d files to process.", len(files))
 
     # 4. Run Extraction
     asyncio.run(orchestrator.run(files))
@@ -83,10 +84,13 @@ def run_extraction_pipeline(config_dir: Path) -> dict[str, int]:
 
 
 if __name__ == "__main__":
+    # Silent overly verbose logs from dependencies
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("google_genai").setLevel(logging.WARNING)
     # Set up MLflow tracking
-    mlflow.set_tracking_uri("http://localhost:8080")
-    mlflow.set_experiment("simple_lease_extraction")
-    mlflow.gemini.autolog()
+    setup_mlflow(
+        tracking_uri="http://localhost:8080", experiment_name="simple_lease_extraction"
+    )
 
     # Run the extraction pipeline with the config directory
     config_dir = Path(__file__).parent / "config/yaml"

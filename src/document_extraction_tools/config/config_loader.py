@@ -1,6 +1,5 @@
 """Configuration Loader."""
 
-import logging
 from pathlib import Path
 from typing import Any
 
@@ -34,8 +33,6 @@ from document_extraction_tools.config.extraction_orchestrator_config import (
 from document_extraction_tools.config.extraction_pipeline_config import (
     ExtractionPipelineConfig,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

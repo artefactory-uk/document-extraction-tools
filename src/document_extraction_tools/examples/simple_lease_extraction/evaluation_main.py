@@ -37,6 +37,7 @@ from .config.local_file_reader_config import LocalFileReaderConfig
 from .config.local_test_data_loader_config import LocalTestDataLoaderConfig
 from .config.pdf_to_image_converter_config import PDFToImageConverterConfig
 from .schema.schema import SimpleLeaseDetails
+from .utils.mlflow_utils import setup_mlflow
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -83,7 +84,7 @@ def run_evaluation_pipeline(config_dir: Path) -> dict[str, int]:
         loader_path
     )
 
-    logger.info(f"Loaded {len(examples)} evaluation examples.")
+    logger.info("Loaded %d evaluation examples.", len(examples))
 
     # 4. Run Evaluation
     asyncio.run(orchestrator.run(examples))
@@ -92,11 +93,15 @@ def run_evaluation_pipeline(config_dir: Path) -> dict[str, int]:
 
 
 if __name__ == "__main__":
+    # Silent overly verbose logs from dependencies
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("google_genai").setLevel(logging.WARNING)
     # Set up MLflow tracking
-    mlflow.set_tracking_uri("http://localhost:8080")
-    mlflow.set_experiment("simple_lease_evaluation")
-    mlflow.gemini.autolog()
+    setup_mlflow(
+        tracking_uri="http://localhost:8080", experiment_name="simple_lease_evaluation"
+    )
 
     # Run the evaluation pipeline with the config directory
     config_dir = Path(__file__).parent / "config/yaml"
-    run_evaluation_pipeline(config_dir)
+    with mlflow.start_run():
+        run_evaluation_pipeline(config_dir)

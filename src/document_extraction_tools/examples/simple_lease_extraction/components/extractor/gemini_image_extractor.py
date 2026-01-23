@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from google.genai.errors import ServerError
-from pydantic import BaseModel
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -20,6 +19,7 @@ from document_extraction_tools.examples.simple_lease_extraction.config.gemini_im
     GeminiImageExtractorConfig,
 )
 from document_extraction_tools.types.document import Document, ImageData
+from document_extraction_tools.types.schema import ExtractionSchema
 
 
 class GeminiImageExtractor(BaseExtractor):
@@ -47,7 +47,9 @@ class GeminiImageExtractor(BaseExtractor):
         stop=stop_after_attempt(10),
     )
     @mlflow.trace(name="extract_from_images", span_type="LLM")
-    async def extract(self, document: Document, schema: type[BaseModel]) -> BaseModel:
+    async def extract(
+        self, document: Document, schema: type[ExtractionSchema]
+    ) -> ExtractionSchema:
         """Run extraction against the Gemini API."""
         span = mlflow.get_current_active_span()
         if span:
