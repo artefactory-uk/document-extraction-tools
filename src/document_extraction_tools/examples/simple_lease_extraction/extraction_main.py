@@ -4,6 +4,8 @@ import asyncio
 import logging
 from pathlib import Path
 
+import mlflow
+
 from document_extraction_tools.config.config_loader import load_config
 from document_extraction_tools.config.extraction_orchestrator_config import (
     ExtractionOrchestratorConfig,
@@ -38,12 +40,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+@mlflow.trace(name="run_extraction_pipeline", span_type="CHAIN")
+def run_extraction_pipeline(config_dir: Path) -> dict[str, int]:
     """Run the example extraction pipeline."""
+    span = mlflow.get_current_active_span()
+    if span is not None:
+        span.set_inputs({"config_dir": str(config_dir)})
+
     # 1. Load Configuration
-    config_path = Path(__file__).parent / "config/yaml"
     cfg: ExtractionPipelineConfig = load_config(
-        config_dir=config_path,
+        config_dir=config_dir,
         orchestrator_config_cls=ExtractionOrchestratorConfig,
         lister_config_cls=LocalFileListerConfig,
         reader_config_cls=LocalFileReaderConfig,
@@ -73,6 +79,15 @@ def main() -> None:
     # 4. Run Extraction
     asyncio.run(orchestrator.run(files))
 
+    return {"files_processed": len(files)}
+
 
 if __name__ == "__main__":
-    main()
+    # Set up MLflow tracking
+    mlflow.set_tracking_uri("http://localhost:8080")
+    mlflow.set_experiment("simple_lease_extraction")
+    mlflow.gemini.autolog()
+
+    # Run the extraction pipeline with the config directory
+    config_dir = Path(__file__).parent / "config/yaml"
+    run_extraction_pipeline(config_dir)

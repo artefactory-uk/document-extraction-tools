@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import mlflow
+
 from document_extraction_tools.base.test_data_loader.base_test_data_loader import (
     BaseTestDataLoader,
 )
@@ -24,6 +26,7 @@ class LocalTestDataLoader(BaseTestDataLoader[SimpleLeaseDetails]):
         super().__init__(config)
         self.config = config
 
+    @mlflow.trace(name="load_test_data", span_type="RETRIEVER")
     def load_test_data(
         self, path_identifier: PathIdentifier
     ) -> list[TestExample[SimpleLeaseDetails]]:

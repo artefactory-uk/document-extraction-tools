@@ -215,6 +215,12 @@ push-docker: ## ⬆️ Push the Docker image to a registry (requires login)
 	$(DOCKER_CMD) push $(IMAGE_NAME):$(IMAGE_TAG)
 	@echo "✅ Docker image $(IMAGE_NAME):$(IMAGE_TAG) pushed."
 
+
+.PHONY: start-mlflow
+start-mlflow: check-colima-running  ## 🚀 Start MLflow server in Docker container using docker-compose
+	@echo "--- Starting MLflow server in Docker container ---"
+	$(DOCKER_CMD) compose up
+
 # ==============================================================================
 # Cleanup Target
 # ==============================================================================
@@ -237,6 +243,7 @@ clean: ## 🗑️ Remove virtual environment and __pycache__ directories
 	check-docker-installed check-colima-installed check-colima-running \
 	build-docker run-docker push-docker \
 	clean
+	start-mlflow
 
 # --- Default Goal ---
 # If 'make' is run without arguments, run the 'help' target.

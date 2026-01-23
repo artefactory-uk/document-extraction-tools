@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import mlflow
+
 from document_extraction_tools.base.file_lister.base_file_lister import BaseFileLister
 from document_extraction_tools.examples.simple_lease_extraction.config.local_file_lister_config import (
     LocalFileListerConfig,
@@ -18,6 +20,7 @@ class LocalFileLister(BaseFileLister):
         self.source_dir = Path(config.source_dir)
         self.extensions = [ext.lower() for ext in config.extensions]
 
+    @mlflow.trace(name="list_files", span_type="RETRIEVER")
     def list_files(self) -> list[PathIdentifier]:
         """Return PathIdentifier entries for matching files."""
         if not self.source_dir.exists():

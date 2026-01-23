@@ -2,10 +2,18 @@
 
 import os
 
+import mlflow
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from google.genai.errors import ServerError
 from pydantic import BaseModel
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from document_extraction_tools.base.extractor.base_extractor import BaseExtractor
 from document_extraction_tools.examples.simple_lease_extraction.config.gemini_image_extractor_config import (
@@ -29,12 +37,21 @@ class GeminiImageExtractor(BaseExtractor):
         self.client = genai.Client(api_key=api_key)
         self.model_name = config.model_name
 
+    @retry(
+        retry=retry_if_exception_type(ServerError),
+        wait=wait_exponential(multiplier=2, min=4, max=60),
+        stop=stop_after_attempt(10),
+    )
+    @mlflow.trace(name="extract_from_images", span_type="LLM")
     async def extract(self, document: Document, schema: type[BaseModel]) -> BaseModel:
         """Run extraction against the Gemini API."""
         contents = []
 
         # 1. Add Text Prompt
-        contents.append("Extract data from this lease document.")
+        prompt = mlflow.genai.load_prompt(
+            f"prompts:/{self.config.mlflow_prompt_name}/{self.config.mlflow_prompt_version}"
+        )
+        contents.append(prompt.format())
 
         # 2. Add Images
         for page in document.pages:

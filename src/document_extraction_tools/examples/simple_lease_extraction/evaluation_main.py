@@ -4,6 +4,8 @@ import asyncio
 import logging
 from pathlib import Path
 
+import mlflow
+
 from document_extraction_tools.config.config_loader import load_evaluation_config
 from document_extraction_tools.config.evaluation_orchestrator_config import (
     EvaluationOrchestratorConfig,
@@ -42,12 +44,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+@mlflow.trace(name="run_evaluation_pipeline", span_type="CHAIN")
+def run_evaluation_pipeline(config_dir: Path) -> dict[str, int]:
     """Run the example evaluation pipeline."""
+    span = mlflow.get_current_active_span()
+    if span is not None:
+        span.set_inputs({"config_dir": str(config_dir)})
+
     # 1. Load Configuration
-    config_path = Path(__file__).parent / "config/yaml"
     cfg: EvaluationPipelineConfig = load_evaluation_config(
-        config_dir=config_path,
+        config_dir=config_dir,
         orchestrator_config_cls=EvaluationOrchestratorConfig,
         test_data_loader_config_cls=LocalTestDataLoaderConfig,
         evaluator_config_classes=[AccuracyEvaluatorConfig, F1EvaluatorConfig],
@@ -82,6 +88,15 @@ def main() -> None:
     # 4. Run Evaluation
     asyncio.run(orchestrator.run(examples))
 
+    return {"examples_processed": len(examples)}
+
 
 if __name__ == "__main__":
-    main()
+    # Set up MLflow tracking
+    mlflow.set_tracking_uri("http://localhost:8080")
+    mlflow.set_experiment("simple_lease_evaluation")
+    mlflow.gemini.autolog()
+
+    # Run the evaluation pipeline with the config directory
+    config_dir = Path(__file__).parent / "config/yaml"
+    run_evaluation_pipeline(config_dir)

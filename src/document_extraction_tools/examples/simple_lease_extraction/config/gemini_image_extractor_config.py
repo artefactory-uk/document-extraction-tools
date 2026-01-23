@@ -12,3 +12,11 @@ class GeminiImageExtractorConfig(BaseExtractorConfig):
         default="gemini-3-flash-preview",
         description="Gemini model to use for extraction.",
     )
+    mlflow_prompt_name: str = Field(
+        default=...,
+        description="MLflow prompt name to use for prompt retrieval.",
+    )
+    mlflow_prompt_version: int = Field(
+        default=...,
+        description="MLflow prompt version to use for prompt retrieval.",
+    )

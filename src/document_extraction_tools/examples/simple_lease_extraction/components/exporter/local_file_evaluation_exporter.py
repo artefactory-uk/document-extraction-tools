@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import aiofiles
+import mlflow
 
 from document_extraction_tools.base.exporter.base_evaluation_exporter import (
     BaseEvaluationExporter,
@@ -22,6 +23,7 @@ class LocalFileEvaluationExporter(BaseEvaluationExporter):
         super().__init__(config)
         Path(self.config.destination.path).mkdir(parents=True, exist_ok=True)
 
+    @mlflow.trace(name="export_evaluation_results", span_type="MEMORY")
     async def export(self, document: Document, results: list[EvaluationResult]) -> None:
         """Export evaluation results to local JSON files."""
         for result in results:

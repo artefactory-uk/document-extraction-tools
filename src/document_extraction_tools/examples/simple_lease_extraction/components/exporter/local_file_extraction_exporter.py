@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import aiofiles
+import mlflow
 from pydantic import BaseModel
 
 from document_extraction_tools.base.exporter.base_extraction_exporter import (
@@ -22,6 +23,7 @@ class LocalFileExtractionExporter(BaseExtractionExporter):
         super().__init__(config)
         Path(self.config.destination.path).mkdir(parents=True, exist_ok=True)
 
+    @mlflow.trace(name="export_extracted_data", span_type="MEMORY")
     async def export(self, document: Document, data: BaseModel) -> None:
         """Persist the extracted data as JSON."""
         filename = f"result_{document.id}"
