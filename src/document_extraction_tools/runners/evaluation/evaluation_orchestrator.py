@@ -202,6 +202,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             ]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
+
             for example, result in zip(examples, results, strict=True):
                 if isinstance(result, Exception):
                     logger.error(

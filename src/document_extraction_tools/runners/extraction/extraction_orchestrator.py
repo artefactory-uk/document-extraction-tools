@@ -166,6 +166,7 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
             ]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
+
             for path_identifier, result in zip(
                 file_paths_to_process, results, strict=True
             ):
