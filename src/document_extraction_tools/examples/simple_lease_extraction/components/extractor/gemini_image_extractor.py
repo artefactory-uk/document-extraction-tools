@@ -53,7 +53,13 @@ class GeminiImageExtractor(BaseExtractor):
         """Run extraction against the Gemini API."""
         span = mlflow.get_current_active_span()
         if span:
-            span.set_inputs({"prompt": self.prompt, "model_name": self.model_name})
+            span.set_inputs(
+                {
+                    "document_id": document.id,
+                    "prompt": self.prompt,
+                    "model_name": self.model_name,
+                }
+            )
 
         contents = []
 
