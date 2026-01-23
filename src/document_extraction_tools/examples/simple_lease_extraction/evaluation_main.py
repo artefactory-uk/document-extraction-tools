@@ -96,6 +96,7 @@ if __name__ == "__main__":
     # Silent overly verbose logs from dependencies
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("google_genai").setLevel(logging.WARNING)
+
     # Set up MLflow tracking
     setup_mlflow(
         tracking_uri="http://localhost:8080", experiment_name="simple_lease_evaluation"
