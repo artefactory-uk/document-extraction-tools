@@ -1,13 +1,14 @@
 [project]
 name = "document-extraction-tools"
 version = "0.1.1"
-description = "A template repository following best practises for data science projects."
+description = "A modular, high-performance toolkit for extracting structured data from documents."
 authors = [
-  { name = "Your Name", email = "your.name@artefact.com" }
+  { name = "Ollie Kemp", email = "oliver.kemp@artefact.com" },
+  { name = "Nikolas Moatsos", email = "nikolas.moatsos@artefact.com" }
 ]
 # Strictly specify the exact Python version required, in the format
 # requires-python = "==<major>.<minor>.<patch>"
-requires-python = "==3.12.10"
+requires-python = ">=3.12"
 
 dependencies = [
   # Add project dependencies here
