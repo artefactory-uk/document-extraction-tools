@@ -115,13 +115,22 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             config.evaluation_exporter
         )
 
-        evaluator_lookup = {cls.__name__: cls for cls in evaluator_classes}
+        config_lookup = {
+            item.__class__.__name__.replace("Config", ""): item
+            for item in config.evaluators
+        }
+
         evaluators = []
-        for item in config.evaluators:
-            evaluator_key = item.__class__.__name__.replace("Config", "")
-            evaluator_cls = evaluator_lookup.get(evaluator_key)
-            if evaluator_cls is not None:
-                evaluators.append(evaluator_cls(item))
+        for evaluator_cls in evaluator_classes:
+            evaluator_key = evaluator_cls.__name__
+            evaluator_config = config_lookup.get(evaluator_key)
+
+            if evaluator_config is not None:
+                evaluators.append(evaluator_cls(evaluator_config))
+            else:
+                raise ValueError(
+                    f"No configuration found for evaluator '{evaluator_key}'."
+                )
         if not evaluators:
             raise ValueError("No valid evaluators configured.")
 
