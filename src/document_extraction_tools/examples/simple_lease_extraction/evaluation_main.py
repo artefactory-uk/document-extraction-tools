@@ -102,13 +102,6 @@ if __name__ == "__main__":
     )
     setattr(EvaluationOrchestrator, "process_example", traced_process_example)
 
-    def _drop_process_example_outputs(span: LiveSpan) -> None:
-        """Span processor to drop outputs from process_example spans."""
-        if span.name == "process_example":
-            span.set_outputs(None)
-
-    mlflow.tracing.configure(span_processors=[_drop_process_example_outputs])
-
     # Silent overly verbose logs from dependencies
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("google_genai").setLevel(logging.WARNING)
@@ -117,6 +110,13 @@ if __name__ == "__main__":
     setup_mlflow(
         tracking_uri="http://localhost:8080", experiment_name="simple_lease_evaluation"
     )
+
+    def _drop_process_example_outputs(span: LiveSpan) -> None:
+        """Span processor to drop outputs from process_example spans."""
+        if span.name == "process_example":
+            span.set_outputs(None)
+
+    mlflow.tracing.configure(span_processors=[_drop_process_example_outputs])
 
     # Run the evaluation pipeline with the config directory
     config_dir = Path(__file__).parent / "config/yaml"
