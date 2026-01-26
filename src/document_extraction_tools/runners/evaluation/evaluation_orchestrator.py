@@ -9,10 +9,11 @@ running extraction, applying evaluators, and exporting results.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Generic
+from typing import Generic, TypeVar
 
 from document_extraction_tools.base.converter.base_converter import BaseConverter
 from document_extraction_tools.base.evaluator.base_evaluator import BaseEvaluator
@@ -38,6 +39,7 @@ from document_extraction_tools.types.schema import ExtractionSchema
 from document_extraction_tools.types.test_example import TestExample
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class EvaluationOrchestrator(Generic[ExtractionSchema]):
@@ -112,12 +114,14 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         evaluation_exporter_instance = evaluation_exporter_cls(
             config.evaluation_exporter
         )
-        evaluators = [
-            evaluator_cls(item)
-            for item in config.evaluators
-            for evaluator_cls in evaluator_classes
-            if evaluator_cls.__name__ == item.evaluator_name
-        ]
+
+        evaluator_lookup = {cls.__name__: cls for cls in evaluator_classes}
+        evaluators = []
+        for item in config.evaluators:
+            evaluator_key = item.__class__.__name__.replace("Config", "")
+            evaluator_cls = evaluator_lookup.get(evaluator_key)
+            if evaluator_cls is not None:
+                evaluators.append(evaluator_cls(item))
         if not evaluators:
             raise ValueError("No valid evaluators configured.")
 
@@ -151,6 +155,27 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         doc_bytes: DocumentBytes = reader.read(path_identifier)
         return converter.convert(doc_bytes)
 
+    @staticmethod
+    async def _run_in_executor_with_context(
+        loop: asyncio.AbstractEventLoop,
+        pool: ThreadPoolExecutor,
+        func: Callable[..., T],
+        *args: object,
+    ) -> T:
+        """Run a function in an executor while preserving contextvars.
+
+        Args:
+            loop (asyncio.AbstractEventLoop): The event loop to use.
+            pool (ThreadPoolExecutor): The thread pool to run the function in.
+            func (Callable[..., T]): The function to execute.
+            *args (object): Arguments to pass to the function.
+
+        Returns:
+            The result of the function execution.
+        """
+        ctx = contextvars.copy_context()
+        return await loop.run_in_executor(pool, ctx.run, func, *args)
+
     async def process_example(
         self,
         example: TestExample[ExtractionSchema],
@@ -166,15 +191,22 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         """
         loop = asyncio.get_running_loop()
 
-        document: Document = await loop.run_in_executor(
-            pool, self._ingest, example.path_identifier, self.reader, self.converter
+        document: Document = await self._run_in_executor_with_context(
+            loop,
+            pool,
+            self._ingest,
+            example.path_identifier,
+            self.reader,
+            self.converter,
         )
 
         async with semaphore:
             pred: ExtractionSchema = await self.extractor.extract(document, self.schema)
 
             evaluation_tasks = [
-                loop.run_in_executor(pool, evaluator.evaluate, example.true, pred)
+                self._run_in_executor_with_context(
+                    loop, pool, evaluator.evaluate, example.true, pred
+                )
                 for evaluator in self.evaluators
             ]
             results: list[EvaluationResult] = list(

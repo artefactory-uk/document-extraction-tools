@@ -2,7 +2,7 @@
 
 from typing import ClassVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class BaseEvaluatorConfig(BaseModel):
@@ -12,4 +12,3 @@ class BaseEvaluatorConfig(BaseModel):
     """
 
     filename: ClassVar[str] = "evaluator.yaml"
-    evaluator_name: str = Field(..., description="Evaluator identifier.")

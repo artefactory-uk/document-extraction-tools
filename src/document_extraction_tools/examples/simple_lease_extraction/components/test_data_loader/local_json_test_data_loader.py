@@ -8,8 +8,8 @@ import mlflow
 from document_extraction_tools.base.test_data_loader.base_test_data_loader import (
     BaseTestDataLoader,
 )
-from document_extraction_tools.examples.simple_lease_extraction.config.local_test_data_loader_config import (
-    LocalTestDataLoaderConfig,
+from document_extraction_tools.examples.simple_lease_extraction.config.local_json_test_data_loader_config import (
+    LocalJSONTestDataLoaderConfig,
 )
 from document_extraction_tools.examples.simple_lease_extraction.schema.schema import (
     SimpleLeaseDetails,
@@ -18,10 +18,10 @@ from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.test_example import TestExample
 
 
-class LocalTestDataLoader(BaseTestDataLoader[SimpleLeaseDetails]):
+class LocalJSONTestDataLoader(BaseTestDataLoader[SimpleLeaseDetails]):
     """Loads evaluation examples from a JSON file."""
 
-    def __init__(self, config: LocalTestDataLoaderConfig) -> None:
+    def __init__(self, config: LocalJSONTestDataLoaderConfig) -> None:
         """Initialize with a local test data loader configuration."""
         super().__init__(config)
         self.config = config

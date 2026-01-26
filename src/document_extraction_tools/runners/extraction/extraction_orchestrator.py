@@ -6,9 +6,11 @@ concurrency to maximize throughput.
 """
 
 import asyncio
+import contextvars
 import logging
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Generic
+from typing import Generic, TypeVar
 
 from document_extraction_tools.base.converter.base_converter import BaseConverter
 from document_extraction_tools.base.exporter.base_extraction_exporter import (
@@ -28,6 +30,7 @@ from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class ExtractionOrchestrator(Generic[ExtractionSchema]):
@@ -119,6 +122,27 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
         doc_bytes: DocumentBytes = reader.read(path_identifier)
         return converter.convert(doc_bytes)
 
+    @staticmethod
+    async def _run_in_executor_with_context(
+        loop: asyncio.AbstractEventLoop,
+        pool: ThreadPoolExecutor,
+        func: Callable[..., T],
+        *args: object,
+    ) -> T:
+        """Run a function in an executor while preserving contextvars.
+
+        Args:
+            loop (asyncio.AbstractEventLoop): The event loop to use.
+            pool (ThreadPoolExecutor): The thread pool to run the function in.
+            func (Callable[..., T]): The function to execute.
+            *args (object): Arguments to pass to the function.
+
+        Returns:
+            The result of the function execution.
+        """
+        ctx = contextvars.copy_context()
+        return await loop.run_in_executor(pool, ctx.run, func, *args)
+
     async def process_document(
         self,
         path_identifier: PathIdentifier,
@@ -138,8 +162,8 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
         """
         loop = asyncio.get_running_loop()
 
-        document: Document = await loop.run_in_executor(
-            pool, self._ingest, path_identifier, self.reader, self.converter
+        document: Document = await self._run_in_executor_with_context(
+            loop, pool, self._ingest, path_identifier, self.reader, self.converter
         )
 
         async with semaphore:

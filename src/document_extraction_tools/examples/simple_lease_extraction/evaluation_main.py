@@ -27,14 +27,16 @@ from .components.exporter.local_file_evaluation_exporter import (
 )
 from .components.extractor.gemini_image_extractor import GeminiImageExtractor
 from .components.reader.local_file_reader import LocalFileReader
-from .components.test_data_loader.local_test_data_loader import LocalTestDataLoader
+from .components.test_data_loader.local_json_test_data_loader import (
+    LocalJSONTestDataLoader,
+)
 from .config.evaluator_config import AccuracyEvaluatorConfig, F1EvaluatorConfig
 from .config.gemini_image_extractor_config import GeminiImageExtractorConfig
 from .config.local_file_evaluation_exporter_config import (
     LocalFileEvaluationExporterConfig,
 )
 from .config.local_file_reader_config import LocalFileReaderConfig
-from .config.local_test_data_loader_config import LocalTestDataLoaderConfig
+from .config.local_json_test_data_loader_config import LocalJSONTestDataLoaderConfig
 from .config.pdf_to_image_converter_config import PDFToImageConverterConfig
 from .schema.schema import SimpleLeaseDetails
 from .utils.mlflow_utils import setup_mlflow
@@ -56,7 +58,7 @@ def run_evaluation_pipeline(config_dir: Path) -> dict[str, int]:
     cfg: EvaluationPipelineConfig = load_evaluation_config(
         config_dir=config_dir,
         orchestrator_config_cls=EvaluationOrchestratorConfig,
-        test_data_loader_config_cls=LocalTestDataLoaderConfig,
+        test_data_loader_config_cls=LocalJSONTestDataLoaderConfig,
         evaluator_config_classes=[AccuracyEvaluatorConfig, F1EvaluatorConfig],
         reader_config_cls=LocalFileReaderConfig,
         converter_config_cls=PDFToImageConverterConfig,
@@ -73,7 +75,7 @@ def run_evaluation_pipeline(config_dir: Path) -> dict[str, int]:
         reader_cls=LocalFileReader,
         converter_cls=PDFToImageConverter,
         extractor_cls=GeminiImageExtractor,
-        test_data_loader_cls=LocalTestDataLoader,
+        test_data_loader_cls=LocalJSONTestDataLoader,
         evaluator_classes=[AccuracyEvaluator, F1Evaluator],
         evaluation_exporter_cls=LocalFileEvaluationExporter,
     )

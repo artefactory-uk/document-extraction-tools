@@ -1,5 +1,7 @@
 """F1 evaluator for the example schema."""
 
+import mlflow
+
 from document_extraction_tools.base.evaluator.base_evaluator import BaseEvaluator
 from document_extraction_tools.examples.simple_lease_extraction.config.evaluator_config import (
     F1EvaluatorConfig,
@@ -20,13 +22,27 @@ class F1Evaluator(BaseEvaluator[SimpleLeaseDetails]):
     def __init__(self, config: F1EvaluatorConfig) -> None:
         """Initialize the F1 evaluator with a configuration."""
         super().__init__(config)
+
+        if self.config.use_llm_judge and (
+            not self.config.llm_judge_model or not self.config.llm_judge_prompt
+        ):
+            raise ValueError(
+                "LLM judge requires llm_judge_model and llm_judge_prompt to be set."
+            )
         self._llm_client = get_llm_judge_client() if self.config.use_llm_judge else None
 
     def _values_equal(self, true_value: object, pred_value: object) -> bool:
         if self.config.use_llm_judge:
-            return invoke_llm_as_a_judge(true_value, pred_value, self._llm_client)
+            return invoke_llm_as_a_judge(
+                true_value,
+                pred_value,
+                self._llm_client,
+                self.config.llm_judge_model,
+                self.config.llm_judge_prompt,
+            )
         return pred_value == true_value
 
+    @mlflow.trace(name="evaluate_f1", span_type="EVALUATOR")
     def evaluate(
         self, true: SimpleLeaseDetails, pred: SimpleLeaseDetails
     ) -> EvaluationResult:

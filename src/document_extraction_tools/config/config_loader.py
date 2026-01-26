@@ -123,7 +123,7 @@ def load_evaluation_config(
     Args:
         test_data_loader_config_cls (type[BaseTestDataLoaderConfig]): The TestDataLoaderConfig subclass to use.
         evaluator_config_classes (list[type[BaseEvaluatorConfig]]): EvaluatorConfig
-            subclasses to load using their filenames.
+            subclasses to load using the top-level keys in evaluator.yaml.
         reader_config_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
         converter_config_cls (type[BaseConverterConfig]): The ConverterConfig subclass to use.
         extractor_config_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
@@ -165,19 +165,37 @@ def load_evaluation_config(
 def _load_evaluator_configs(
     config_dir: Path, evaluator_config_classes: list[type[BaseEvaluatorConfig]]
 ) -> list[BaseEvaluatorConfig]:
-    """Helper to load multiple evaluator configs.
+    """Helper to load multiple evaluator configs from evaluator.yaml.
 
     Args:
         config_dir (Path): Directory containing the configs.
         evaluator_config_classes (list[type[BaseEvaluatorConfig]]): EvaluatorConfig
-            subclasses to load using their filenames.
+            subclasses keyed by their class names.
 
     Returns:
         list[BaseEvaluatorConfig]: The loaded evaluator configurations.
     """
-    evaluators: list[BaseEvaluatorConfig] = []
-    for evaluator_cls in evaluator_config_classes:
-        evaluators.append(
-            evaluator_cls(**_load_yaml(config_dir / evaluator_cls.filename))
+    evaluator_lookup = {cls.__name__: cls for cls in evaluator_config_classes}
+    evaluator_yaml = _load_yaml(config_dir / BaseEvaluatorConfig.filename)
+    if not evaluator_yaml:
+        raise ValueError("No evaluator configuration found in evaluator.yaml.")
+    if not isinstance(evaluator_yaml, dict):
+        raise ValueError(
+            "Expected evaluator.yaml to contain a mapping of config class names."
         )
+
+    evaluators: list[BaseEvaluatorConfig] = []
+    for evaluator_key, evaluator_data in evaluator_yaml.items():
+        evaluator_cls = evaluator_lookup.get(evaluator_key)
+        if evaluator_cls is None:
+            raise ValueError(
+                f"Unknown evaluator config class '{evaluator_key}' in evaluator.yaml."
+            )
+        if evaluator_data is None:
+            evaluator_data = {}
+        if not isinstance(evaluator_data, dict):
+            raise ValueError(
+                f"Expected evaluator data for '{evaluator_key}' to be a mapping."
+            )
+        evaluators.append(evaluator_cls(**evaluator_data))
     return evaluators

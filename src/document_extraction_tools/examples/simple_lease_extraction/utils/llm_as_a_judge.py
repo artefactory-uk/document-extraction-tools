@@ -8,18 +8,6 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
-_MODEL_NAME = "gemini-3-flash-preview"
-_PROMPT_TEMPLATE = """You are a judge for field-level equality.
-Return whether the predicted value should be considered equal to the true value.
-Respond with JSON only.
-
-True value:
-{true_value}
-
-Predicted value:
-{pred_value}
-"""
-
 
 class LlmJudgeResult(BaseModel):
     """Structured response for equality judgment."""
@@ -37,16 +25,20 @@ def get_llm_judge_client() -> genai.Client:
 
 
 def invoke_llm_as_a_judge(
-    true_value: Any, pred_value: Any, client: genai.Client  # noqa: ANN401
+    true_value: Any,  # noqa: ANN401
+    pred_value: Any,  # noqa: ANN401
+    client: genai.Client,
+    model_name: str,
+    prompt_template: str,
 ) -> bool:
     """Return True when two field values should be considered equal."""
-    prompt = _PROMPT_TEMPLATE.format(
+    prompt = prompt_template.format(
         true_value=true_value,
         pred_value=pred_value,
     )
 
     response = client.models.generate_content(
-        model=_MODEL_NAME,
+        model=model_name,
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
