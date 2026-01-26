@@ -26,14 +26,16 @@ class BaseEvaluationExporter(ABC):
         self.config = config
 
     @abstractmethod
-    async def export(self, document: Document, results: list[EvaluationResult]) -> None:
+    async def export(
+        self, results: list[tuple[Document, list[EvaluationResult]]]
+    ) -> None:
         """Persist evaluation results to a target destination.
 
         This is an asynchronous operation to support non-blocking I/O writes.
 
         Args:
-            document (Document): The source document for these results.
-            results (list[EvaluationResult]): A list of evaluation results to be exported.
+            results (list[tuple[Document, list[EvaluationResult]]]):
+                A list of tuples containing documents and their associated evaluation results.
 
         Returns:
             None: The method should raise an exception if the export fails.

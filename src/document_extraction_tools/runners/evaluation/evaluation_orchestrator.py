@@ -181,13 +181,16 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         example: TestExample[ExtractionSchema],
         pool: ThreadPoolExecutor,
         semaphore: asyncio.Semaphore,
-    ) -> None:
+    ) -> tuple[Document, list[EvaluationResult]]:
         """Runs extraction, evaluation, and export for a single example.
 
         Args:
             example (TestExample[ExtractionSchema]): The test example to process.
             pool (ThreadPoolExecutor): The thread pool for CPU-bound tasks.
             semaphore (asyncio.Semaphore): Semaphore to limit concurrency.
+
+        Returns:
+            tuple[Document, list[EvaluationResult]]: The document and its evaluation results.
         """
         loop = asyncio.get_running_loop()
 
@@ -212,9 +215,9 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             results: list[EvaluationResult] = list(
                 await asyncio.gather(*evaluation_tasks)
             )
-            await self.exporter.export(document, results)
 
             logger.info("Completed evaluation for %s", document.id)
+            return document, results
 
     async def run(
         self,
@@ -228,17 +231,23 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
-
             tasks = [
                 self.process_example(example, pool, semaphore) for example in examples
             ]
 
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results_or_exceptions = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for example, result in zip(examples, results, strict=True):
-                if isinstance(result, Exception):
+            valid_results: list[tuple[Document, list[EvaluationResult]]] = []
+
+            for example, result in zip(examples, results_or_exceptions, strict=True):
+                if isinstance(result, BaseException):
                     logger.error(
                         "Evaluation pipeline failed for %s",
                         example.path_identifier,
                         exc_info=result,
                     )
+                else:
+                    valid_results.append(result)
+
+            if valid_results:
+                await self.exporter.export(valid_results)

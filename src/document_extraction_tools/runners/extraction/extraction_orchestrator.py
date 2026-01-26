@@ -194,7 +194,7 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
             for path_identifier, result in zip(
                 file_paths_to_process, results, strict=True
             ):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     logger.error(
                         "Extraction pipeline failed for %s",
                         path_identifier,

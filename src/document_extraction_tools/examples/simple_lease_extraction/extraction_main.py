@@ -84,6 +84,12 @@ def run_extraction_pipeline(config_dir: Path) -> dict[str, int]:
 
 
 if __name__ == "__main__":
+    # Decorate orchestrator methods with MLflow tracing
+    traced_process_document = mlflow.trace(name="process_document", span_type="CHAIN")(
+        ExtractionOrchestrator.process_document
+    )
+    setattr(ExtractionOrchestrator, "process_document", traced_process_document)
+
     # Silent overly verbose logs from dependencies
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("google_genai").setLevel(logging.WARNING)

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 import mlflow
+from mlflow.entities.span import LiveSpan
 
 from document_extraction_tools.config.config_loader import load_evaluation_config
 from document_extraction_tools.config.evaluation_orchestrator_config import (
@@ -95,6 +96,19 @@ def run_evaluation_pipeline(config_dir: Path) -> dict[str, int]:
 
 
 if __name__ == "__main__":
+    # Decorate orchestrator methods with MLflow tracing
+    traced_process_example = mlflow.trace(name="process_example", span_type="CHAIN")(
+        EvaluationOrchestrator.process_example
+    )
+    setattr(EvaluationOrchestrator, "process_example", traced_process_example)
+
+    def _drop_process_example_outputs(span: LiveSpan) -> None:
+        """Span processor to drop outputs from process_example spans."""
+        if span.name == "process_example":
+            span.set_outputs(None)
+
+    mlflow.tracing.configure(span_processors=[_drop_process_example_outputs])
+
     # Silent overly verbose logs from dependencies
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("google_genai").setLevel(logging.WARNING)
