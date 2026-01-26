@@ -63,10 +63,8 @@ class GeminiImageExtractor(BaseExtractor):
 
         contents = []
 
-        # 1. Add Text Prompt
         contents.append(self.prompt)
 
-        # 2. Add Images
         for page in document.pages:
             if isinstance(page.data, ImageData):
                 contents.append(
@@ -75,7 +73,6 @@ class GeminiImageExtractor(BaseExtractor):
                     )
                 )
 
-        # 3. Call Gemini API
         response = await self.client.aio.models.generate_content(
             model=self.model_name,
             contents=contents,
