@@ -1,0 +1,26 @@
+AccuracyEvaluatorConfig:
+  use_llm_judge: true
+  llm_judge_model: "gemini-3-flash-preview"
+  llm_judge_prompt: |-
+    You are a judge for field-level equality.
+    Return whether the predicted value should be considered equal to the true value.
+    Respond with JSON only.
+
+    True value:
+    {true_value}
+
+    Predicted value:
+    {pred_value}
+F1EvaluatorConfig:
+  use_llm_judge: true
+  llm_judge_model: "gemini-3-flash-preview"
+  llm_judge_prompt: |-
+    You are a judge for field-level equality.
+    Return whether the predicted value should be considered equal to the true value.
+    Respond with JSON only.
+
+    True value:
+    {true_value}
+
+    Predicted value:
+    {pred_value}
