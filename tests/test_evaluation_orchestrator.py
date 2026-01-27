@@ -1,7 +1,5 @@
 """Tests for the evaluation orchestrator."""
 
-from __future__ import annotations
-
 import asyncio
 import contextvars
 from concurrent.futures import ThreadPoolExecutor
@@ -33,10 +31,10 @@ from document_extraction_tools.runners import (
 from document_extraction_tools.types import (
     Document,
     DocumentBytes,
+    EvaluationExample,
     EvaluationResult,
     Page,
     PathIdentifier,
-    TestExample,
     TextData,
 )
 
@@ -133,7 +131,7 @@ class DummyTestDataLoader(BaseTestDataLoader[DummySchema]):
 
     def load_test_data(
         self, _path_identifier: PathIdentifier
-    ) -> list[TestExample[DummySchema]]:
+    ) -> list[EvaluationExample[DummySchema]]:
         """Return an empty set of examples for tests."""
         return []
 
@@ -242,7 +240,7 @@ async def test_process_example_runs_pipeline() -> None:
         schema=DummySchema,
     )
 
-    example: TestExample[DummySchema] = TestExample(
+    example: EvaluationExample[DummySchema] = EvaluationExample(
         id="example-1",
         path_identifier=PathIdentifier(path="doc-1"),
         true=DummySchema(value="pred:doc-1"),
@@ -273,13 +271,13 @@ async def test_run_exports_only_valid_results() -> None:
         schema=DummySchema,
     )
 
-    examples: list[TestExample[DummySchema]] = [
-        TestExample(
+    examples: list[EvaluationExample[DummySchema]] = [
+        EvaluationExample(
             id="example-ok",
             path_identifier=PathIdentifier(path="doc-ok"),
             true=DummySchema(value="pred:doc-ok"),
         ),
-        TestExample(
+        EvaluationExample(
             id="example-fail",
             path_identifier=PathIdentifier(path="doc-fail"),
             true=DummySchema(value="pred:doc-fail"),

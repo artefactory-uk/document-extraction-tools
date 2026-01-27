@@ -1,7 +1,5 @@
 """Tests for the extraction orchestrator."""
 
-from __future__ import annotations
-
 import asyncio
 import contextvars
 from concurrent.futures import ThreadPoolExecutor

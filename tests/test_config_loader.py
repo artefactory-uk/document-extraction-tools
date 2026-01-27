@@ -1,7 +1,5 @@
 """Tests for config loader utilities."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
@@ -16,10 +14,12 @@ from document_extraction_tools.config import (
     BaseFileListerConfig,
     BaseReaderConfig,
     BaseTestDataLoaderConfig,
-    _load_evaluator_configs,
-    _load_yaml,
     load_config,
     load_evaluation_config,
+)
+from document_extraction_tools.config.config_loader import (
+    _load_evaluator_configs,
+    _load_yaml,
 )
 from document_extraction_tools.config.evaluation_orchestrator_config import (
     EvaluationOrchestratorConfig,

@@ -2,11 +2,9 @@
 
 This module defines the EvaluationOrchestrator class, which coordinates
 the evaluation of extraction models against ground-truth data using multiple
-evaluators. It handles loading test examples, reading and converting documents,
+evaluators. It handles loading evaluation examples, reading and converting documents,
 running extraction, applying evaluators, and exporting results.
 """
-
-from __future__ import annotations
 
 import asyncio
 import contextvars
@@ -33,10 +31,10 @@ from document_extraction_tools.config.evaluation_pipeline_config import (
 )
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.document_bytes import DocumentBytes
+from document_extraction_tools.types.evaluation_example import EvaluationExample
 from document_extraction_tools.types.evaluation_result import EvaluationResult
 from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
-from document_extraction_tools.types.test_example import TestExample
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -88,7 +86,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         test_data_loader_cls: type[BaseTestDataLoader[ExtractionSchema]],
         evaluator_classes: list[type[BaseEvaluator[ExtractionSchema]]],
         evaluation_exporter_cls: type[BaseEvaluationExporter],
-    ) -> EvaluationOrchestrator[ExtractionSchema]:
+    ) -> "EvaluationOrchestrator[ExtractionSchema]":
         """Factory method to create an EvaluationOrchestrator from config.
 
         Args:
@@ -187,14 +185,14 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
 
     async def process_example(
         self,
-        example: TestExample[ExtractionSchema],
+        example: EvaluationExample[ExtractionSchema],
         pool: ThreadPoolExecutor,
         semaphore: asyncio.Semaphore,
     ) -> tuple[Document, list[EvaluationResult]]:
         """Runs extraction, evaluation, and export for a single example.
 
         Args:
-            example (TestExample[ExtractionSchema]): The test example to process.
+            example (EvaluationExample[ExtractionSchema]): The evaluation example to process.
             pool (ThreadPoolExecutor): The thread pool for CPU-bound tasks.
             semaphore (asyncio.Semaphore): Semaphore to limit concurrency.
 
@@ -230,12 +228,12 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
 
     async def run(
         self,
-        examples: list[TestExample[ExtractionSchema]],
+        examples: list[EvaluationExample[ExtractionSchema]],
     ) -> None:
         """Run all evaluators and export results for the provided examples.
 
         Args:
-            examples (list[TestExample[ExtractionSchema]]): The test examples to evaluate.
+            examples (list[EvaluationExample[ExtractionSchema]]): The evaluation examples to evaluate.
         """
         semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
