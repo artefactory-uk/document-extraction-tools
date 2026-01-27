@@ -10,9 +10,9 @@ from typing import Generic
 from document_extraction_tools.config.base_test_data_loader_config import (
     BaseTestDataLoaderConfig,
 )
+from document_extraction_tools.types.evaluation_example import EvaluationExample
 from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
-from document_extraction_tools.types.test_example import TestExample
 
 
 class BaseTestDataLoader(ABC, Generic[ExtractionSchema]):
@@ -29,16 +29,16 @@ class BaseTestDataLoader(ABC, Generic[ExtractionSchema]):
     @abstractmethod
     def load_test_data(
         self, path_identifier: PathIdentifier
-    ) -> list[TestExample[ExtractionSchema]]:
+    ) -> list[EvaluationExample[ExtractionSchema]]:
         """Load test examples for evaluation.
 
-        This method should retrieve and return a list of TestExample instances
+        This method should retrieve and return a list of EvaluationExample instances
         based on the provided path identifier.
 
         Args:
-            path_identifier (PathIdentifier): The source location for loading test examples.
+            path_identifier (PathIdentifier): The source location for loading evaluation examples.
 
         Returns:
-            list[TestExample[ExtractionSchema]]: A list of test examples for evaluation.
+            list[EvaluationExample[ExtractionSchema]]: A list of evaluation examples for evaluation.
         """
         pass

@@ -11,7 +11,7 @@ from document_extraction_tools.types.path_identifier import PathIdentifier
 from document_extraction_tools.types.schema import ExtractionSchema
 
 
-class TestExample(BaseModel, Generic[ExtractionSchema]):
+class EvaluationExample(BaseModel, Generic[ExtractionSchema]):
     """Pairs a ground-truth schema with a source document."""
 
     id: str = Field(..., description="Identifier for the test example.")
