@@ -1,3 +1,0 @@
-model_name: "gemini-3-flash-preview"
-mlflow_prompt_name: "lease_extraction_prompt"
-mlflow_prompt_version: 1
