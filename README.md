@@ -32,80 +32,27 @@ This repo is intentionally implementation-light: you plug in your own components
 
 ```
 .
-├── src
-│   └── document_extraction_tools
-│       ├── __init__.py
-│       ├── py.typed
-│       ├── base
-│       │   ├── __init__.py
-│       │   ├── converter
-│       │   │   ├── __init__.py
-│       │   │   └── base_converter.py
-│       │   ├── evaluator
-│       │   │   ├── __init__.py
-│       │   │   └── base_evaluator.py
-│       │   ├── exporter
-│       │   │   ├── __init__.py
-│       │   │   ├── base_evaluation_exporter.py
-│       │   │   └── base_extraction_exporter.py
-│       │   ├── extractor
-│       │   │   ├── __init__.py
-│       │   │   └── base_extractor.py
-│       │   ├── file_lister
-│       │   │   ├── __init__.py
-│       │   │   └── base_file_lister.py
-│       │   ├── reader
-│       │   │   ├── __init__.py
-│       │   │   └── base_reader.py
-│       │   └── test_data_loader
-│       │       ├── __init__.py
-│       │       └── base_test_data_loader.py
-│       ├── config
-│       │   ├── __init__.py
-│       │   ├── base_converter_config.py
-│       │   ├── base_evaluation_exporter_config.py
-│       │   ├── base_evaluator_config.py
-│       │   ├── base_extraction_exporter_config.py
-│       │   ├── base_extractor_config.py
-│       │   ├── base_file_lister_config.py
-│       │   ├── base_reader_config.py
-│       │   ├── base_test_data_loader_config.py
-│       │   ├── config_loader.py
-│       │   ├── evaluation_orchestrator_config.py
-│       │   ├── evaluation_pipeline_config.py
-│       │   ├── extraction_orchestrator_config.py
-│       │   └── extraction_pipeline_config.py
-│       ├── runners
-│       │   ├── __init__.py
-│       │   ├── evaluation
-│       │   │   ├── __init__.py
-│       │   │   └── evaluation_orchestrator.py
-│       │   └── extraction
-│       │       ├── __init__.py
-│       │       └── extraction_orchestrator.py
-│       └── types
-│           ├── __init__.py
-│           ├── document.py
-│           ├── document_bytes.py
-│           ├── evaluation_example.py
-│           ├── evaluation_result.py
-│           ├── path_identifier.py
-│           └── schema.py
-├── tests
-│   ├── test_config_loader.py
-│   ├── test_evaluation_orchestrator.py
-│   └── test_extraction_orchestrator.py
-├── .github
-│   ├── workflows
-│   │   └── run-precommit-and-tests.yaml
-│   ├── copilot-instructions.md
-│   └── dependabot.yml
-├── .gitignore
-├── .pre-commit-config.yaml
-├── README.md
-├── pull_request_template.md
-├── pyproject.toml
-└── uv.lock
+├── src                               
+│   └── document_extraction_tools     
+│       ├── base                      # abstract base classes you implement
+│       │   ├── converter             # conversion interface definitions
+│       │   ├── evaluator             # evaluation interface definitions
+│       │   ├── exporter              # export interface definitions
+│       │   ├── extractor             # extraction interface definitions
+│       │   ├── file_lister           # file discovery interface definitions
+│       │   ├── reader                # document read interface definitions
+│       │   └── test_data_loader      # evaluation dataset loader interfaces
+│       ├── config                    # Pydantic configs + YAML loader helpers
+│       ├── runners                   # orchestrators that run pipelines
+│       │   ├── evaluation            # evaluation pipeline orchestration
+│       │   └── extraction            # extraction pipeline orchestration
+│       ├── types                     # shared models/types used across modules
+│       └── py.typed                  
+├── tests                             
+├── pull_request_template.md          
+├── pyproject.toml                    
+├── README.md                         
+└── uv.lock                           
 ```
 
 ## What this library gives you
