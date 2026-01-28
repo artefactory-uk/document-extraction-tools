@@ -30,7 +30,7 @@ This repo is intentionally implementation-light: you plug in your own components
 
 ## Project layout
 
-```
+```bash
 .
 ├── src                               
 │   └── document_extraction_tools     
