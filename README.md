@@ -49,6 +49,28 @@ This repo is intentionally implementation-light: you plug in your own components
    - Runs extraction + evaluation across examples with the same concurrency model
      (thread pool + async I/O).
 
+### Configuration
+
+Each component has a matching **base config class** (Pydantic model) that defines a
+default YAML filename and acts as the parent for your own config fields. You’ll subclass
+these to add settings specific to your implementation.
+
+Extraction config base classes:
+
+- `BaseFileListerConfig`
+- `BaseReaderConfig`
+- `BaseConverterConfig`
+- `BaseExtractorConfig`
+- `BaseExtractionExporterConfig`
+- `ExtractionOrchestratorConfig` (you can use as-is; no need to subclass)
+
+Evaluation specific config base classes:
+
+- `BaseTestDataLoaderConfig`
+- `BaseEvaluatorConfig`
+- `BaseEvaluationExporterConfig`
+- `EvaluationOrchestratorConfig` (you can use as-is; no need to subclass)
+
 ### Data models
 
 - `PathIdentifier`: A uniform handle for file locations plus optional context.
@@ -74,6 +96,8 @@ src/document_extraction_tools/
 
 Create a Pydantic model that represents the structured data you want out of each document.
 
+Example implementation:
+
 ```python
 from pydantic import BaseModel
 
@@ -86,6 +110,8 @@ class InvoiceSchema(BaseModel):
 ### 2) Implement pipeline components
 
 Subclass the base interfaces and implement the required methods.
+
+Example implementations:
 
 ```python
 from document_extraction_tools.base import (
@@ -109,7 +135,8 @@ class MyFileLister(BaseFileLister):
         super().__init__(config)
 
     def list_files(self) -> list[PathIdentifier]:
-        return [PathIdentifier(path="/path/to/doc.pdf")]
+        # Discover and return file identifiers
+        ...
 
 
 class MyReader(BaseReader):
@@ -117,8 +144,8 @@ class MyReader(BaseReader):
         super().__init__(config)
 
     def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
-        with open(path_identifier.path, "rb") as f:
-            return DocumentBytes(file_bytes=f.read(), path_identifier=path_identifier)
+        # Read file bytes from disk, object storage, etc.
+        ...
 
 
 class MyConverter(BaseConverter):
@@ -150,7 +177,7 @@ class MyExtractionExporter(BaseExtractionExporter):
 
 ### 3) Create configuration models and YAML files
 
-Each component has a base config class with a default filename (e.g. `reader.yaml`).
+Each component has a base config class with a default filename (e.g. `extractor.yaml`).
 Subclass the config models to add your own fields, then provide YAML files in
 the directory you pass as `config_dir` to `load_config` (default is
 `config/yaml/`).
@@ -172,6 +199,8 @@ model_name: "gemini-3-flash-preview"
 ```
 
 ### 4) Load config and run the pipeline
+
+Example usage:
 
 ```python
 import asyncio
@@ -212,6 +241,55 @@ The evaluation pipeline reuses your reader/converter/extractor and adds three pi
 2. **Evaluator(s)**: compute metrics for each example
 3. **EvaluationExporter**: persist results
 
+Example implementations:
+
+```python
+from document_extraction_tools.base import (
+    BaseTestDataLoader,
+    BaseEvaluator,
+    BaseEvaluationExporter,
+)
+from document_extraction_tools.config import (
+    BaseTestDataLoaderConfig,
+    BaseEvaluatorConfig,
+    BaseEvaluationExporterConfig,
+)
+from document_extraction_tools.types import EvaluationExample, EvaluationResult, PathIdentifier
+
+
+class MyTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
+    def __init__(self, config: BaseTestDataLoaderConfig) -> None:
+        super().__init__(config)
+
+    def load_test_data(
+        self, path_identifier: PathIdentifier
+    ) -> list[EvaluationExample[InvoiceSchema]]:
+        # Load ground-truth + path pairs from disk/DB/etc.
+        ...
+
+
+class MyEvaluator(BaseEvaluator[InvoiceSchema]):
+    def __init__(self, config: BaseEvaluatorConfig) -> None:
+        super().__init__(config)
+
+    def evaluate(
+        self, true: InvoiceSchema, pred: InvoiceSchema
+    ) -> EvaluationResult:
+        # Compare true vs pred and return a metric
+        ...
+
+
+class MyEvaluationExporter(BaseEvaluationExporter):
+    def __init__(self, config: BaseEvaluationExporterConfig) -> None:
+        super().__init__(config)
+
+    async def export(
+        self, results: list[tuple[Document, list[EvaluationResult]]]
+    ) -> None:
+        # Persist evaluation results
+        ...
+```
+
 Required YAML filenames for evaluation:
 
 - `evaluation_orchestrator.yaml`
@@ -221,6 +299,14 @@ Required YAML filenames for evaluation:
 - `converter.yaml`
 - `extractor.yaml`
 - `evaluation_exporter.yaml`
+
+Example YAML (`config/yaml/evaluator.yaml`):
+
+```yaml
+MyEvaluatorConfig:
+  # add fields your Evaluator config defines
+  threshold: 0.8
+```
 
 Example usage:
 
@@ -284,7 +370,7 @@ as reference:
 
 Contributions are welcome. Please:
 
-- Create a new branch using `feat/short-description`, `fix/short-description`, etc.
+- Create a new branch using the following naming conventions: `feat/short-description`, `fix/short-description`, etc.
 - Describe the change clearly in the PR description.
 - Add or update tests in `tests/`.
 - Run linting and tests before pushing: `uv run pre-commit run --all-files` and `uv run pytest`.
