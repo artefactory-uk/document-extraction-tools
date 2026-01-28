@@ -4,6 +4,110 @@ A modular, high-performance toolkit for building document extraction pipelines. 
 
 This repo is intentionally implementation-light: you plug in your own components (readers, converters, extractors, exporters, evaluators) for each specific document type or data source.
 
+## Table of Contents
+
+- [document-extraction-tools](#document-extraction-tools)
+  - [Table of Contents](#table-of-contents)
+  - [Project layout](#project-layout)
+  - [What this library gives you](#what-this-library-gives-you)
+  - [Core concepts and components](#core-concepts-and-components)
+    - [Data models](#data-models)
+    - [Extraction pipeline](#extraction-pipeline)
+    - [Evaluation pipeline](#evaluation-pipeline)
+    - [Configuration](#configuration)
+  - [How to implement an extraction pipeline](#how-to-implement-an-extraction-pipeline)
+    - [1) Define your extraction schema](#1-define-your-extraction-schema)
+    - [2) Implement pipeline components](#2-implement-pipeline-components)
+    - [3) Create configuration models and YAML files](#3-create-configuration-models-and-yaml-files)
+    - [4) Load config and run the pipeline](#4-load-config-and-run-the-pipeline)
+  - [How to implement an evaluation pipeline](#how-to-implement-an-evaluation-pipeline)
+    - [1) Implement evaluation pipeline components](#1-implement-evaluation-pipeline-components)
+    - [2) Create configuration models and YAML files](#2-create-configuration-models-and-yaml-files)
+    - [3) Load config and run the pipeline](#3-load-config-and-run-the-pipeline)
+  - [Concurrency model](#concurrency-model)
+  - [Development](#development)
+  - [Contributing](#contributing)
+
+## Project layout
+
+```
+.
+├── src
+│   └── document_extraction_tools
+│       ├── __init__.py
+│       ├── py.typed
+│       ├── base
+│       │   ├── __init__.py
+│       │   ├── converter
+│       │   │   ├── __init__.py
+│       │   │   └── base_converter.py
+│       │   ├── evaluator
+│       │   │   ├── __init__.py
+│       │   │   └── base_evaluator.py
+│       │   ├── exporter
+│       │   │   ├── __init__.py
+│       │   │   ├── base_evaluation_exporter.py
+│       │   │   └── base_extraction_exporter.py
+│       │   ├── extractor
+│       │   │   ├── __init__.py
+│       │   │   └── base_extractor.py
+│       │   ├── file_lister
+│       │   │   ├── __init__.py
+│       │   │   └── base_file_lister.py
+│       │   ├── reader
+│       │   │   ├── __init__.py
+│       │   │   └── base_reader.py
+│       │   └── test_data_loader
+│       │       ├── __init__.py
+│       │       └── base_test_data_loader.py
+│       ├── config
+│       │   ├── __init__.py
+│       │   ├── base_converter_config.py
+│       │   ├── base_evaluation_exporter_config.py
+│       │   ├── base_evaluator_config.py
+│       │   ├── base_extraction_exporter_config.py
+│       │   ├── base_extractor_config.py
+│       │   ├── base_file_lister_config.py
+│       │   ├── base_reader_config.py
+│       │   ├── base_test_data_loader_config.py
+│       │   ├── config_loader.py
+│       │   ├── evaluation_orchestrator_config.py
+│       │   ├── evaluation_pipeline_config.py
+│       │   ├── extraction_orchestrator_config.py
+│       │   └── extraction_pipeline_config.py
+│       ├── runners
+│       │   ├── __init__.py
+│       │   ├── evaluation
+│       │   │   ├── __init__.py
+│       │   │   └── evaluation_orchestrator.py
+│       │   └── extraction
+│       │       ├── __init__.py
+│       │       └── extraction_orchestrator.py
+│       └── types
+│           ├── __init__.py
+│           ├── document.py
+│           ├── document_bytes.py
+│           ├── evaluation_example.py
+│           ├── evaluation_result.py
+│           ├── path_identifier.py
+│           └── schema.py
+├── tests
+│   ├── test_config_loader.py
+│   ├── test_evaluation_orchestrator.py
+│   └── test_extraction_orchestrator.py
+├── .github
+│   ├── workflows
+│   │   └── run-precommit-and-tests.yaml
+│   ├── copilot-instructions.md
+│   └── dependabot.yml
+├── .gitignore
+├── .pre-commit-config.yaml
+├── README.md
+├── pull_request_template.md
+├── pyproject.toml
+└── uv.lock
+```
+
 ## What this library gives you
 
 - A consistent set of **interfaces** for the entire document-extraction lifecycle.
@@ -12,6 +116,15 @@ This repo is intentionally implementation-light: you plug in your own components
 - A **configuration system** (Pydantic + YAML) for repeatable pipelines.
 
 ## Core concepts and components
+
+### Data models
+
+- `PathIdentifier`: A uniform handle for file locations plus optional context.
+- `DocumentBytes`: Raw bytes + MIME type + path identifier.
+- `Document`: Parsed content (pages, text/image data, metadata).
+- `ExtractionSchema`: Your Pydantic model (the target output).
+- `EvaluationExample`: (path, ground truth) pair for evaluation runs.
+- `EvaluationResult`: Name + result + description for evaluation metrics.
 
 ### Extraction pipeline
 
@@ -71,26 +184,9 @@ Evaluation specific config base classes:
 - `BaseEvaluationExporterConfig`
 - `EvaluationOrchestratorConfig` (you can use as-is; no need to subclass)
 
-### Data models
+## How to implement an extraction pipeline
 
-- `PathIdentifier`: A uniform handle for file locations plus optional context.
-- `DocumentBytes`: Raw bytes + MIME type + path identifier.
-- `Document`: Parsed content (pages, text/image data, metadata).
-- `ExtractionSchema`: Your Pydantic model (the target output).
-- `EvaluationExample`: (path, ground truth) pair for evaluation runs.
-- `EvaluationResult`: Name + result + description for evaluation metrics.
-
-## Project layout (relevant paths)
-
-```
-src/document_extraction_tools/
-  base/            # abstract interfaces you implement
-  config/          # config models + YAML loader
-  runners/         # orchestrators (extraction + evaluation)
-  types/           # shared data models
-```
-
-## How to implement your own extraction pipeline
+For a full worked example including evaluation, please see [the document-extraction-examples](https://github.com/artefactory-uk/document-extraction-examples) repository. Below we outline the steps for a successful implementation. 
 
 ### 1) Define your extraction schema
 
@@ -99,12 +195,12 @@ Create a Pydantic model that represents the structured data you want out of each
 Example implementation:
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class InvoiceSchema(BaseModel):
-    invoice_id: str
-    vendor: str
-    total: float
+    invoice_id: str = Field(..., description="Unique invoice identifier.")
+    vendor: str = Field(..., description="Vendor or issuer name.")
+    total: float = Field(..., description="Total invoice amount.")
 ```
 
 ### 2) Implement pipeline components
@@ -191,6 +287,15 @@ Default filenames:
 - `extractor.yaml`
 - `extraction_exporter.yaml`
 
+Example config model:
+
+```python
+from document_extraction_tools.config import BaseExtractorConfig
+
+class MyExtractorConfig(BaseExtractorConfig):
+    model_name: str
+```
+
 Example YAML (`config/yaml/extractor.yaml`):
 
 ```yaml
@@ -234,6 +339,8 @@ asyncio.run(orchestrator.run(file_paths))
 ```
 
 ## How to implement an evaluation pipeline
+
+### 1) Implement evaluation pipeline components
 
 The evaluation pipeline reuses your reader/converter/extractor and adds three pieces:
 
@@ -290,7 +397,11 @@ class MyEvaluationExporter(BaseEvaluationExporter):
         ...
 ```
 
-Required YAML filenames for evaluation:
+### 2) Create configuration models and YAML files
+
+Implement your own config models by subclassing the base evaluation configs and adding any fields your components need.
+
+Default YAML filenames for evaluation:
 
 - `evaluation_orchestrator.yaml`
 - `test_data_loader.yaml`
@@ -300,6 +411,16 @@ Required YAML filenames for evaluation:
 - `extractor.yaml`
 - `evaluation_exporter.yaml`
 
+Warning: The top-level key in the YAML MUST match the evaluator configuration class name, and the evaluator configuration class name MUST be the name of the evaluator class with the suffix `Config`. For example:
+
+```python
+class MyEvaluator(BaseEvaluator):
+    ...
+
+class MyEvaluatorConfig(BaseEvaluatorConfig):
+    ...
+```
+
 Example YAML (`config/yaml/evaluator.yaml`):
 
 ```yaml
@@ -307,6 +428,8 @@ MyEvaluatorConfig:
   # add fields your Evaluator config defines
   threshold: 0.8
 ```
+
+### 3) Load config and run the pipeline
 
 Example usage:
 
@@ -352,14 +475,6 @@ asyncio.run(orchestrator.run(examples))
   - `max_workers` (thread pool size)
   - `max_concurrency` (async I/O semaphore limit)
 
-## Examples
-
-We maintain a companion repo with concrete implementations built on top of this
-module. It includes example pipelines and component implementations you can use
-as reference: 
-
-[document-extraction-examples](https://github.com/artefactory-uk/document-extraction-examples)
-
 ## Development
 
 - Install dependencies: `uv sync`
@@ -370,7 +485,9 @@ as reference:
 
 Contributions are welcome. Please:
 
+- Report bugs or feature requests by opening an issue.
 - Create a new branch using the following naming conventions: `feat/short-description`, `fix/short-description`, etc.
 - Describe the change clearly in the PR description.
 - Add or update tests in `tests/`.
 - Run linting and tests before pushing: `uv run pre-commit run --all-files` and `uv run pytest`.
+- If you open a PR, please notify the maintainers ([Ollie Kemp]( https://github.com/ollie-artefact) or [Nikolas Moatsos](https://github.com/nmoatsos)).
