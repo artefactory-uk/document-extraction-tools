@@ -1,298 +1,440 @@
-# template-ds-repo
+# document-extraction-tools
 
-This repository provides a template and set of recommended tooling for all Python projects using UV. By following this structure and tooling, you ensure consistency, maintainability, and adherence to best practices across projects.
+A modular, high-performance toolkit for building document extraction pipelines. The library provides clear interfaces for every pipeline stage, plus orchestrators that wire the stages together with async I/O and CPU-bound parallelism.
 
-This repository uses [UV](https://astral.sh/uv) for managing virtual environments and dependencies. UV simplifies venv creation, dependency resolution, installation, and versioning.
+This repo is intentionally implementation-light: you plug in your own components (readers, converters, extractors, exporters, evaluators) for each specific document type or data source.
 
 ## Table of Contents
-- [template-ds-repo](#template-ds-repo)
-  - [Table of Contents](#table-of-contents)
-  - [Project Structure](#project-structure)
-  - [Getting Started](#getting-started)
-    - [1. Prerequisites](#1-prerequisites)
-        - [MacOS](#macos)
-        - [Ubuntu](#ubuntu)
-        - [Understanding the Makefiles](#understanding-the-makefiles)
-      - [UV installation](#uv-installation)
-      - [Docker installation](#docker-installation)
-        - [MacOS](#macos-1)
-        - [Ubuntu](#ubuntu-1)
-    - [2. Configuration (Optional)](#2-configuration-optional)
-      - [Choosing a Python version](#choosing-a-python-version)
-      - [Configuring the Application Entrypoint](#configuring-the-application-entrypoint)
-      - [Other configurations](#other-configurations)
-    - [3. Installing Dependencies](#3-installing-dependencies)
-    - [4. Managing Dependencies](#4-managing-dependencies)
-      - [The Lock File (`uv.lock`)](#the-lock-file-uvlock)
-    - [5. Running Code](#5-running-code)
-    - [6. Building a Docker Container](#6-building-a-docker-container)
-    - [7. Running a Docker Container](#7-running-a-docker-container)
-  - [Continuous Integration (CI)](#continuous-integration-ci)
-    - [Workflow Overview](#workflow-overview)
-    - [The Importance of Tests](#the-importance-of-tests)
 
-## Project Structure
+- [document-extraction-tools](#document-extraction-tools)
+  - [Table of Contents](#table-of-contents)
+  - [Project layout](#project-layout)
+  - [What this library gives you](#what-this-library-gives-you)
+  - [Core concepts and components](#core-concepts-and-components)
+    - [Data models](#data-models)
+    - [Extraction pipeline](#extraction-pipeline)
+    - [Evaluation pipeline](#evaluation-pipeline)
+    - [Configuration](#configuration)
+  - [How to implement an extraction pipeline](#how-to-implement-an-extraction-pipeline)
+    - [1) Define your extraction schema](#1-define-your-extraction-schema)
+    - [2) Implement pipeline components](#2-implement-pipeline-components)
+    - [3) Create configuration models and YAML files](#3-create-configuration-models-and-yaml-files)
+    - [4) Load config and run the pipeline](#4-load-config-and-run-the-pipeline)
+  - [How to implement an evaluation pipeline](#how-to-implement-an-evaluation-pipeline)
+    - [1) Implement evaluation pipeline components](#1-implement-evaluation-pipeline-components)
+    - [2) Create configuration models and YAML files](#2-create-configuration-models-and-yaml-files)
+    - [3) Load config and run the pipeline](#3-load-config-and-run-the-pipeline)
+  - [Concurrency model](#concurrency-model)
+  - [Development](#development)
+  - [Contributing](#contributing)
+
+## Project layout
 
 ```bash
 .
-├── .github
-│   └── workflows
-│       └── run-precommit-and-tests.yaml  # Runs pre-commit hooks and tests
-├── .gitignore                    # Files for git to ignore
-├── .pre-commit-config.yaml       # Configures pre-commit
-├── Makefile                      # Main entry point: Detects OS, includes platform Makefile, runs common tasks.
-├── README.md                     # This file!
-├── pull_request_template.md      # Template to use for pull requests
-├── .env.example                  # Example environment variables file
-├── Dockerfile                    # Dockerfile using UV
-├── pyproject.toml                # Project configuration (build system / dependencies)
-├── uv.lock                       # Exact versions of all dependencies (do not edit manually)
-├── src                           # Root of your module - UV will install this automatically
-│   └── your_module               # Module name (replace in project.name in pyproject.toml)
-│       ├── __init__.py
-│       ├── adder.py
-│       ├── main.py
-│       └── py.typed              # Marker file indicating the package supports type hints 
-└── tests
-    └── test_example.py
-````
-
-## Getting Started
-
-Follow these steps to set up the repository for the first time:
-
-### 1\. Prerequisites
-
-Ensure your machine has a suitable package manager (`brew` or `apt`) and `make` installed.
-
-##### MacOS
-
-First ensure Homebrew is installed:
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+├── src                               
+│   └── document_extraction_tools     
+│       ├── base                      # abstract base classes you implement
+│       │   ├── converter             # conversion interface definitions
+│       │   ├── evaluator             # evaluation interface definitions
+│       │   ├── exporter              # export interface definitions
+│       │   ├── extractor             # extraction interface definitions
+│       │   ├── file_lister           # file discovery interface definitions
+│       │   ├── reader                # document read interface definitions
+│       │   └── test_data_loader      # evaluation dataset loader interfaces
+│       ├── config                    # Pydantic configs + YAML loader helpers
+│       ├── runners                   # orchestrators that run pipelines
+│       │   ├── evaluation            # evaluation pipeline orchestration
+│       │   └── extraction            # extraction pipeline orchestration
+│       ├── types                     # shared models/types used across modules
+│       └── py.typed                  
+├── tests                             
+├── pull_request_template.md          
+├── pyproject.toml                    
+├── README.md                         
+└── uv.lock                           
 ```
 
-Then ensure `make` is installed (it often comes with Xcode Command Line Tools, but installing explicitly doesn't hurt):
+## What this library gives you
 
-```bash
-brew install make
+- A consistent set of **interfaces** for the entire document-extraction lifecycle.
+- A **typed data model** for documents, pages, and extraction results.
+- **Orchestrators** that run extraction and evaluation pipelines concurrently and safely.
+- A **configuration system** (Pydantic + YAML) for repeatable pipelines.
+
+## Core concepts and components
+
+### Data models
+
+- `PathIdentifier`: A uniform handle for file locations plus optional context.
+- `DocumentBytes`: Raw bytes + MIME type + path identifier.
+- `Document`: Parsed content (pages, text/image data, metadata).
+- `ExtractionSchema`: Your Pydantic model (the target output).
+- `EvaluationExample`: (path, ground truth) pair for evaluation runs.
+- `EvaluationResult`: Name + result + description for evaluation metrics.
+
+### Extraction pipeline
+
+1. **FileLister** (`BaseFileLister`)
+   - Discovers input files and returns a list of `PathIdentifier` objects.
+
+2. **Reader** (`BaseReader`)
+   - Reads raw bytes from the source and returns `DocumentBytes`.
+
+3. **Converter** (`BaseConverter`)
+   - Converts raw bytes into a structured `Document` (pages, metadata, content type).
+
+4. **Extractor** (`BaseExtractor`)
+   - Asynchronously extracts structured data into a Pydantic schema (`ExtractionSchema`).
+
+5. **ExtractionExporter** (`BaseExtractionExporter`)
+   - Asynchronously persists extracted data to your desired destination (DB, files, API, etc.).
+
+6. **ExtractionOrchestrator**
+   - Runs the pipeline with a thread pool for CPU-bound steps (read/convert) and async
+     concurrency for I/O-bound steps (extract/export).
+
+### Evaluation pipeline
+
+1. **TestDataLoader** (`BaseTestDataLoader`)
+   - Loads evaluation examples (ground truth + file path) as `EvaluationExample`.
+
+2. **Evaluator** (`BaseEvaluator`)
+   - Computes a metric by comparing `true` vs. `pred` schemas.
+
+3. **EvaluationExporter** (`BaseEvaluationExporter`)
+   - Persists evaluation results.
+
+4. **EvaluationOrchestrator**
+   - Runs extraction + evaluation across examples with the same concurrency model
+     (thread pool + async I/O).
+
+### Configuration
+
+Each component has a matching **base config class** (Pydantic model) that defines a
+default YAML filename and acts as the parent for your own config fields. You’ll subclass
+these to add settings specific to your implementation.
+
+Extraction config base classes:
+
+- `BaseFileListerConfig`
+- `BaseReaderConfig`
+- `BaseConverterConfig`
+- `BaseExtractorConfig`
+- `BaseExtractionExporterConfig`
+- `ExtractionOrchestratorConfig` (you can use as-is; no need to subclass)
+
+Evaluation specific config base classes:
+
+- `BaseTestDataLoaderConfig`
+- `BaseEvaluatorConfig`
+- `BaseEvaluationExporterConfig`
+- `EvaluationOrchestratorConfig` (you can use as-is; no need to subclass)
+
+## How to implement an extraction pipeline
+
+For a full worked example including evaluation, please see [the document-extraction-examples](https://github.com/artefactory-uk/document-extraction-examples) repository. Below we outline the steps for a successful implementation. 
+
+### 1) Define your extraction schema
+
+Create a Pydantic model that represents the structured data you want out of each document.
+
+Example implementation:
+
+```python
+from pydantic import BaseModel, Field
+
+class InvoiceSchema(BaseModel):
+    invoice_id: str = Field(..., description="Unique invoice identifier.")
+    vendor: str = Field(..., description="Vendor or issuer name.")
+    total: float = Field(..., description="Total invoice amount.")
 ```
 
-##### Ubuntu
+### 2) Implement pipeline components
 
-Ensure `apt` is up-to-date:
+Subclass the base interfaces and implement the required methods.
 
-```bash
-sudo apt update
+Example implementations:
+
+```python
+from document_extraction_tools.base import (
+    BaseFileLister,
+    BaseReader,
+    BaseConverter,
+    BaseExtractor,
+    BaseExtractionExporter,
+)
+from document_extraction_tools.types import Document, DocumentBytes, PathIdentifier
+from document_extraction_tools.config import (
+    BaseFileListerConfig,
+    BaseReaderConfig,
+    BaseConverterConfig,
+    BaseExtractorConfig,
+    BaseExtractionExporterConfig,
+)
+
+class MyFileLister(BaseFileLister):
+    def __init__(self, config: BaseFileListerConfig) -> None:
+        super().__init__(config)
+
+    def list_files(self) -> list[PathIdentifier]:
+        # Discover and return file identifiers
+        ...
+
+
+class MyReader(BaseReader):
+    def __init__(self, config: BaseReaderConfig) -> None:
+        super().__init__(config)
+
+    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+        # Read file bytes from disk, object storage, etc.
+        ...
+
+
+class MyConverter(BaseConverter):
+    def __init__(self, config: BaseConverterConfig) -> None:
+        super().__init__(config)
+
+    def convert(self, document_bytes: DocumentBytes) -> Document:
+        # Parse PDF, OCR, etc. and return a Document
+        ...
+
+
+class MyExtractor(BaseExtractor):
+    def __init__(self, config: BaseExtractorConfig) -> None:
+        super().__init__(config)
+
+    async def extract(self, document: Document, schema: type[InvoiceSchema]) -> InvoiceSchema:
+        # Call LLM or rules-based system
+        ...
+
+
+class MyExtractionExporter(BaseExtractionExporter):
+    def __init__(self, config: BaseExtractionExporterConfig) -> None:
+        super().__init__(config)
+
+    async def export(self, document: Document, data: InvoiceSchema) -> None:
+        # Persist data to DB, filesystem, etc.
+        ...
 ```
 
-Then install `make` and necessary build tools:
+### 3) Create configuration models and YAML files
 
-```bash
-sudo apt install make build-essential
+Each component has a base config class with a default filename (e.g. `extractor.yaml`).
+Subclass the config models to add your own fields, then provide YAML files in
+the directory you pass as `config_dir` to `load_config` (default is
+`config/yaml/`).
+
+Default filenames:
+
+- `extraction_orchestrator.yaml`
+- `file_lister.yaml`
+- `reader.yaml`
+- `converter.yaml`
+- `extractor.yaml`
+- `extraction_exporter.yaml`
+
+Example config model:
+
+```python
+from document_extraction_tools.config import BaseExtractorConfig
+
+class MyExtractorConfig(BaseExtractorConfig):
+    model_name: str
 ```
 
-##### Understanding the Makefiles
+Example YAML (`config/yaml/extractor.yaml`):
 
-This project uses a Makefile for automation
-
-  * **`Makefile`**: The entry point for all `make` commands (e.g., `make install`). It auto-detects your OS (macOS or Ubuntu/Debian) to install requirements.
-
-#### UV installation
-The `Makefile` provides targets to install a specific version of UV onto your system. You will need to restart your shell to invoke `uv` once installed. `Makefile` commands (such as `make install`) will not require you to restart your shell. 
-
-#### Docker installation
-
-Docker desktop is not allowed due to licensing constraints. We therefore use `colima` on MacOS to run the docker daemon. Please follow these instructions to install on MacOS/Ubuntu.
-
-##### MacOS
-
-1.  Ensure `homebrew` is installed
-2.  Install Docker, Docker BuildX and Colima
-    ```bash
-    brew install docker docker-buildx colima
-    ```
-3.  Link the Docker BuildX plugin to the Docker install
-    ```bash
-    mkdir -p ~/.docker/cli-plugins  
-    ln -sfn $(brew --prefix)/opt/docker-buildx/bin/docker-buildx ~/.docker/cli-plugins/docker-buildx
-    ```
-4.  Start the colima runtime
-    ```bash
-    colima start
-    ```
-5.  Verify installation
-    ```bash
-    docker buildx version
-    ```
-    This should output something similar to
-    ```bash
-    github.com/docker/buildx v0.30.1 Homebrew
-    ```
-
-##### Ubuntu
-
-1.  Update APT
-    ```bash
-    sudo apt update
-    ```
-2.  Install Docker and Docker BuildX
-    ```bash
-    sudo apt install -y docker.io docker-buildx
-    ```
-3.  Start and enable docker
-    ```bash
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    ```
-4.  Grant your user permissions to use docker without `sudo`
-    ```bash
-    sudo usermod -aG docker $USER
-    newgrp docker
-    ```
-    Note: this should work first time but you may need to restart your ubuntu instance to use docker without `sudo`.
-5.  Verify installation
-    ```bash
-    docker buildx version
-    ```
-    This should output something similar to
-    ```bash
-    [github.com/docker/buildx](https://github.com/docker/buildx) 0.21.3 0.21.3-0ubuntu1~24.04.1
-    ```
-
-### 2\. Configuration (Optional)
-
-#### Choosing a Python version
-
-The project requires a strict Python version defined in `pyproject.toml` (currently `3.12.10`).
-
-  * **Automatic Management:** When you run `make install` (or `uv sync`), `uv` will automatically download and install the required Python version if it is not present on your system. You do not need to manually install Python using `brew` or `apt` purely for this project.
-  * **Changing Versions:** To change the project's Python version, edit the `requires-python` line in `pyproject.toml`.
-
-#### Configuring the Application Entrypoint
-
-The `Makefile` is configured to run a specific module as the main application entry point.
-
-  * **Current Entrypoint:** `your_module.main`
-  * **How to Change:** If you rename your source directory or change the main script, update the `APP_ENTRYPOINT` variable in the `Makefile`:
-    ```makefile
-    # Inside Makefile
-    APP_ENTRYPOINT := your_new_module.new_main_script
-    ```
-
-#### Other configurations
-
-1.  Copy `.env.example` to `.env`.
-2.  Edit the environment variables as desired.
-3.  Run your `make` commands normally; they will pick up these values.
-
-You can also override on the command line:
-
-```bash
-make install UV_VERSION=0.7.2
+```yaml
+# add fields your Extractor config defines
+model_name: "gemini-3-flash-preview"
 ```
 
-### 3\. Installing Dependencies
+### 4) Load config and run the pipeline
 
-This installs the specified Python version (via the platform Makefile/environment), installs UV, creates a virtual environment, and installs all project and development dependencies:
+Example usage:
 
-```bash
-make install
+```python
+import asyncio
+from document_extraction_tools.config import load_config
+from document_extraction_tools.runners import ExtractionOrchestrator
+from document_extraction_tools.config import ExtractionOrchestratorConfig
+
+config = load_config(
+    lister_config_cls=MyFileListerConfig,
+    reader_config_cls=MyReaderConfig,
+    converter_config_cls=MyConverterConfig,
+    extractor_config_cls=MyExtractorConfig,
+    exporter_config_cls=MyExtractionExporterConfig,
+    orchestrator_config_cls=ExtractionOrchestratorConfig,
+    config_dir=Path("config/yaml"),
+)
+
+orchestrator = ExtractionOrchestrator.from_config(
+    config=config,
+    schema=InvoiceSchema,
+    reader_cls=MyReader,
+    converter_cls=MyConverter,
+    extractor_cls=MyExtractor,
+    exporter_cls=MyExtractionExporter,
+)
+
+file_lister = MyFileLister(config.file_lister)
+file_paths = file_lister.list_files()
+
+asyncio.run(orchestrator.run(file_paths))
 ```
 
-> *Note:* On Ubuntu this may prompt for your password for `sudo` when installing system packages.
+## How to implement an evaluation pipeline
 
-### 4\. Managing Dependencies
+### 1) Implement evaluation pipeline components
 
-This project uses `uv` to manage dependencies, which replaces standard `pip` workflows. Do not use `pip install` manually.
+The evaluation pipeline reuses your reader/converter/extractor and adds three pieces:
 
-  * **Adding a package:** To add a new library (e.g., pandas) and update `pyproject.toml` and `uv.lock` automatically:
-    ```bash
-    uv add pandas
-    ```
-  * **Adding a dev dependency:** To add a tool used only for development (e.g., a new linter):
-    ```bash
-    uv add --dev some-linter
-    ```
-  * **Removing a package:**
-    ```bash
-    uv remove pandas
-    ```
-  * **Syncing:** If you pull changes from git that include an updated `uv.lock`, run:
-    ```bash
-    make install
-    ```
-    (This runs `uv sync` under the hood to ensure your virtual environment matches the lock file).
+1. **TestDataLoader**: loads evaluation examples (file + ground truth)
+2. **Evaluator(s)**: compute metrics for each example
+3. **EvaluationExporter**: persist results
 
-#### The Lock File (`uv.lock`)
+Example implementations:
 
-The `uv.lock` file contains the exact versions of every dependency (and transitive dependency) installed in the project.
+```python
+from document_extraction_tools.base import (
+    BaseTestDataLoader,
+    BaseEvaluator,
+    BaseEvaluationExporter,
+)
+from document_extraction_tools.config import (
+    BaseTestDataLoaderConfig,
+    BaseEvaluatorConfig,
+    BaseEvaluationExporterConfig,
+)
+from document_extraction_tools.types import EvaluationExample, EvaluationResult, PathIdentifier
 
-  * **Do not edit this file manually.**
-  * **Always commit this file** to version control. This ensures that every developer and the CI/CD pipeline uses the exact same package versions, preventing "it works on my machine" issues.
 
-### 5\. Running Code
+class MyTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
+    def __init__(self, config: BaseTestDataLoaderConfig) -> None:
+        super().__init__(config)
 
-To run your main application (configured in the `run` target, e.g. `src/your_module/main.py`):
+    def load_test_data(
+        self, path_identifier: PathIdentifier
+    ) -> list[EvaluationExample[InvoiceSchema]]:
+        # Load ground-truth + path pairs from disk/DB/etc.
+        ...
 
-```bash
-make run
+
+class MyEvaluator(BaseEvaluator[InvoiceSchema]):
+    def __init__(self, config: BaseEvaluatorConfig) -> None:
+        super().__init__(config)
+
+    def evaluate(
+        self, true: InvoiceSchema, pred: InvoiceSchema
+    ) -> EvaluationResult:
+        # Compare true vs pred and return a metric
+        ...
+
+
+class MyEvaluationExporter(BaseEvaluationExporter):
+    def __init__(self, config: BaseEvaluationExporterConfig) -> None:
+        super().__init__(config)
+
+    async def export(
+        self, results: list[tuple[Document, list[EvaluationResult]]]
+    ) -> None:
+        # Persist evaluation results
+        ...
 ```
 
-This executes `uv run python -m your_module.main`. The `uv run` command ensures the script runs inside the project's isolated virtual environment without requiring you to manually activate it.
+### 2) Create configuration models and YAML files
 
-### 6\. Building a Docker Container
+Implement your own config models by subclassing the base evaluation configs and adding any fields your components need.
 
-Build a Docker image using the `Dockerfile` (which uses UV to install dependencies):
+Default YAML filenames for evaluation:
 
-```bash
-make build-docker
+- `evaluation_orchestrator.yaml`
+- `test_data_loader.yaml`
+- `evaluator.yaml` (one top-level key per evaluator config class name)
+- `reader.yaml`
+- `converter.yaml`
+- `extractor.yaml`
+- `evaluation_exporter.yaml`
+
+Warning: The top-level key in the YAML MUST match the evaluator configuration class name, and the evaluator configuration class name MUST be the name of the evaluator class with the suffix `Config`. For example:
+
+```python
+class MyEvaluator(BaseEvaluator):
+    ...
+
+class MyEvaluatorConfig(BaseEvaluatorConfig):
+    ...
 ```
 
-The image will be tagged according to `IMAGE_NAME` and `IMAGE_TAG` (override via `.env` or CLI if desired).
+Example YAML (`config/yaml/evaluator.yaml`):
 
-**Note on Caching:** The `Dockerfile` is optimized for caching using `uv`. It uses a multi-stage build where dependencies are installed in a separate `builder` stage using `uv` cache mounts. This significantly speeds up repeated builds.
-
-### 7\. Running a Docker Container
-
-Run the built image interactively, injecting your environment variables from `.env`:
-
-```bash
-make run-docker
+```yaml
+MyEvaluatorConfig:
+  # add fields your Evaluator config defines
+  threshold: 0.8
 ```
 
------
+### 3) Load config and run the pipeline
 
-## Continuous Integration (CI)
+Example usage:
 
-This repository includes a CI setup using GitHub Actions to automatically check code quality and run tests on every push and pull request.
+```python
+from document_extraction_tools.config import load_evaluation_config
+from document_extraction_tools.runners import EvaluationOrchestrator
+from document_extraction_tools.config import EvaluationOrchestratorConfig
 
-### Workflow Overview
+config = load_evaluation_config(
+    test_data_loader_config_cls=MyTestDataLoaderConfig,
+    evaluator_config_classes=[MyEvaluatorConfig],
+    reader_config_cls=MyReaderConfig,
+    converter_config_cls=MyConverterConfig,
+    extractor_config_cls=MyExtractorConfig,
+    evaluation_exporter_config_cls=MyEvaluationExporterConfig,
+    orchestrator_config_cls=EvaluationOrchestratorConfig,
+    config_dir=Path("config/yaml"),
+)
 
-The CI workflow is defined in:
+orchestrator = EvaluationOrchestrator.from_config(
+    config=config,
+    schema=InvoiceSchema,
+    reader_cls=MyReader,
+    converter_cls=MyConverter,
+    extractor_cls=MyExtractor,
+    test_data_loader_cls=MyTestDataLoader,
+    evaluator_classes=[MyEvaluator],
+    evaluation_exporter_cls=MyEvaluationExporter,
+)
 
+examples = MyTestDataLoader(config.test_data_loader).load_test_data(
+    PathIdentifier(path="/path/to/eval-set")
+)
+
+asyncio.run(orchestrator.run(examples))
 ```
-.github/workflows/run-precommit-and-tests.yaml
-```
 
-On each push or PR, it:
+## Concurrency model
 
-1.  **Checkout Code**
-    Retrieves your branch or PR.
-2.  **Setup Environment**
-    Installs `make` and necessary build tools, then runs `make install`.
-3.  **Run Linting**
-    Executes `make lint` (via UV run pre-commit) to enforce formatting and static analysis (`black`, `isort`, `ruff`, `mypy`, etc.).
-4.  **Run Tests**
-    Executes `make test` (via UV run pytest) to discover and run your test suite.
+- **Reader + Converter** run in a thread pool (CPU-bound work).
+- **Extractor + Exporter** run concurrently in the event loop (I/O-bound work).
+- Tuning options live in `extraction_orchestrator.yaml` and `evaluation_orchestrator.yaml`:
+  - `max_workers` (thread pool size)
+  - `max_concurrency` (async I/O semaphore limit)
 
-### The Importance of Tests
+## Development
 
-The `make test` step is only valuable if you write meaningful tests:
+- Install dependencies: `uv sync`
+- Run pre-commit: `uv run pre-commit run --all-files`
+- Run tests: `uv run pytest`
 
-  * **Create tests** in `tests/` (or alongside your modules) using `pytest`.
-  * If no tests or trivial tests exist, `pytest` may pass with zero tests, giving false confidence.
-  * **Aim for high coverage** on your core logic to catch regressions early.
+## Contributing
 
-Both `make lint` and `make test` must pass for a “green” CI status. Failing either will block merges until issues are resolved.
+Contributions are welcome. Please:
+
+- Report bugs or feature requests by opening an issue.
+- Create a new branch using the following naming conventions: `feat/short-description`, `fix/short-description`, etc.
+- Describe the change clearly in the PR description.
+- Add or update tests in `tests/`.
+- Run linting and tests before pushing: `uv run pre-commit run --all-files` and `uv run pytest`.
+- If you open a PR, please notify the maintainers ([Ollie Kemp]( https://github.com/ollie-artefact) or [Nikolas Moatsos](https://github.com/nmoatsos)).
