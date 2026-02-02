@@ -14,18 +14,20 @@ A document extraction pipeline consists of these stages:
 
 ## Step 1: Define Your Schema
 
-First, define a Pydantic model for the data you want to extract:
+First, define a Pydantic model for the data you want to extract. This example shows a lease schema similar to the [examples repository](https://github.com/artefactory-uk/document-extraction-examples):
 
 ```python
 from pydantic import BaseModel, Field
 
-class InvoiceSchema(BaseModel):
-    """Schema for extracted invoice data."""
+class LeaseSchema(BaseModel):
+    """Schema for extracted lease data."""
 
-    invoice_id: str = Field(..., description="Unique invoice identifier")
-    vendor: str = Field(..., description="Vendor or issuer name")
-    total: float = Field(..., description="Total invoice amount")
-    date: str = Field(..., description="Invoice date")
+    landlord_name: str = Field(..., description="Full name of the landlord")
+    tenant_name: str = Field(..., description="Full name of the tenant")
+    property_address: str = Field(..., description="Address of the leased property")
+    lease_start_date: str = Field(..., description="Lease start date (YYYY-MM-DD)")
+    lease_end_date: str = Field(..., description="Lease end date (YYYY-MM-DD)")
+    monthly_rent: float = Field(..., description="Monthly rent amount")
 ```
 
 ## Step 2: Implement Components
@@ -47,8 +49,8 @@ class MyFileLister(BaseFileLister):
     def list_files(self) -> list[PathIdentifier]:
         # Return list of files to process
         return [
-            PathIdentifier(path="/data/invoice1.pdf"),
-            PathIdentifier(path="/data/invoice2.pdf"),
+            PathIdentifier(path="/data/lease1.pdf"),
+            PathIdentifier(path="/data/lease2.pdf"),
         ]
 
 
@@ -69,15 +71,15 @@ class MyConverter(BaseConverter):
 
 
 class MyExtractor(BaseExtractor):
-    async def extract(self, document: Document, schema: type[InvoiceSchema]) -> InvoiceSchema:
+    async def extract(self, document: Document, schema: type[LeaseSchema]) -> LeaseSchema:
         # Extract data using LLM or rules-based system
         ...
 
 
 class MyExtractionExporter(BaseExtractionExporter):
-    async def export(self, document: Document, data: InvoiceSchema) -> None:
+    async def export(self, document: Document, data: LeaseSchema) -> None:
         # Save to database, file, etc.
-        print(f"Exported: {data.invoice_id}")
+        print(f"Exported lease for: {data.tenant_name}")
 ```
 
 ## Step 3: Create Configuration
@@ -111,7 +113,7 @@ config = load_config(
 # Create orchestrator
 orchestrator = ExtractionOrchestrator.from_config(
     config=config,
-    schema=InvoiceSchema,
+    schema=LeaseSchema,
     reader_cls=MyReader,
     converter_cls=MyConverter,
     extractor_cls=MyExtractor,
@@ -129,4 +131,4 @@ asyncio.run(orchestrator.run(file_paths))
 
 - Learn about [Data Models](../concepts/data-models.md)
 - Understand the [Extraction Pipeline](../concepts/extraction-pipeline.md) in depth
-- See the [Examples Repository](https://github.com/artefactory-uk/document-extraction-examples) for complete implementations
+- See the [Examples Repository](https://github.com/artefactory-uk/document-extraction-examples) for the complete Simple Lease Extraction implementation with Gemini

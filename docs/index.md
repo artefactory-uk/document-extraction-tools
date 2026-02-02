@@ -25,11 +25,11 @@ from document_extraction_tools.runners import ExtractionOrchestrator
 # Configure and run your pipeline
 orchestrator = ExtractionOrchestrator.from_config(
     config=config,
-    schema=InvoiceSchema,
-    reader_cls=MyReader,
-    converter_cls=MyConverter,
-    extractor_cls=MyExtractor,
-    exporter_cls=MyExtractionExporter,
+    schema=LeaseSchema,  # Your Pydantic schema
+    reader_cls=LocalReader,
+    converter_cls=PDFToImageConverter,
+    extractor_cls=GeminiImageExtractor,
+    exporter_cls=JSONExporter,
 )
 
 await orchestrator.run(file_paths)

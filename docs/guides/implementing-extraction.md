@@ -10,46 +10,62 @@ This guide walks through implementing a complete extraction pipeline.
 
 ## Step 1: Define Your Extraction Schema
 
-Start by defining a Pydantic model for your target output:
+Start by defining a Pydantic model for your target output. This example shows a lease details schema similar to the [examples repository](https://github.com/artefactory-uk/document-extraction-examples):
 
 ```python
 from pydantic import BaseModel, Field
 
-class InvoiceSchema(BaseModel):
-    """Schema for extracted invoice data."""
+class Address(BaseModel):
+    """Property address details."""
 
-    invoice_id: str = Field(
+    street: str = Field(..., description="Street address")
+    city: str = Field(..., description="City name")
+    state: str = Field(..., description="State or region")
+    postal_code: str = Field(..., description="Postal/ZIP code")
+
+
+class LeaseSchema(BaseModel):
+    """Schema for extracted lease data."""
+
+    landlord_name: str = Field(
         ...,
-        description="Unique invoice identifier"
+        description="Full name of the landlord or property owner"
     )
-    vendor: str = Field(
+    tenant_name: str = Field(
         ...,
-        description="Vendor or issuer name"
+        description="Full name of the tenant"
     )
-    total: float = Field(
+    property_address: Address = Field(
         ...,
-        description="Total invoice amount"
+        description="Address of the leased property"
+    )
+    lease_start_date: str = Field(
+        ...,
+        description="Start date of the lease in YYYY-MM-DD format"
+    )
+    lease_end_date: str = Field(
+        ...,
+        description="End date of the lease in YYYY-MM-DD format"
+    )
+    monthly_rent: float = Field(
+        ...,
+        description="Monthly rent amount"
+    )
+    security_deposit: float = Field(
+        default=0.0,
+        description="Security deposit amount"
     )
     currency: str = Field(
         default="USD",
         description="Currency code"
     )
-    line_items: list[LineItem] = Field(
-        default_factory=list,
-        description="Individual line items"
-    )
-
-
-class LineItem(BaseModel):
-    description: str
-    quantity: int
-    unit_price: float
 ```
 
 !!! tip "Schema Design Tips"
-    - Use descriptive `Field` descriptions - they help LLM extractors
+    - Use descriptive `Field` descriptions - they help LLM extractors understand what to extract
     - Set sensible defaults for optional fields
-    - Break complex structures into nested models
+    - Break complex structures into nested models (like `Address` above)
+    - Use standard date formats (ISO 8601) for date fields
 
 ## Step 2: Implement Pipeline Components
 
@@ -151,41 +167,57 @@ class PDFConverter(BaseConverter):
 
 ### Extractor
 
+This example shows a Gemini-based extractor similar to the [examples repository](https://github.com/artefactory-uk/document-extraction-examples):
+
 ```python
+import google.generativeai as genai
 from document_extraction_tools.base import BaseExtractor
 from document_extraction_tools.config import BaseExtractorConfig
 from document_extraction_tools.types import Document
 
 
-class LLMExtractorConfig(BaseExtractorConfig):
-    model_name: str
+class GeminiExtractorConfig(BaseExtractorConfig):
+    model_name: str = "gemini-1.5-flash"
     temperature: float = 0.0
 
 
-class LLMExtractor(BaseExtractor):
-    def __init__(self, config: LLMExtractorConfig) -> None:
+class GeminiImageExtractor(BaseExtractor):
+    def __init__(self, config: GeminiExtractorConfig) -> None:
         super().__init__(config)
         self.config = config
-        self.client = create_llm_client(config.model_name)
+        self.model = genai.GenerativeModel(config.model_name)
 
     async def extract(
-        self, document: Document, schema: type[InvoiceSchema]
-    ) -> InvoiceSchema:
-        # Build prompt from document pages
-        prompt = self._build_prompt(document, schema)
+        self, document: Document, schema: type[LeaseSchema]
+    ) -> LeaseSchema:
+        # Build prompt with schema description
+        prompt = self._build_prompt(schema)
 
-        # Call LLM
-        response = await self.client.generate(
-            prompt=prompt,
-            temperature=self.config.temperature,
+        # Prepare image parts from document pages
+        parts = [prompt]
+        for page in document.pages:
+            if page.image:
+                parts.append(page.image)
+
+        # Call Gemini with images
+        response = await self.model.generate_content_async(
+            parts,
+            generation_config=genai.GenerationConfig(
+                temperature=self.config.temperature,
+                response_mime_type="application/json",
+                response_schema=schema,
+            ),
         )
 
         # Parse and validate response
-        return schema.model_validate_json(response)
+        return schema.model_validate_json(response.text)
 
-    def _build_prompt(self, document: Document, schema: type) -> str:
-        # Build extraction prompt with document content and schema
-        ...
+    def _build_prompt(self, schema: type) -> str:
+        return f"""Extract the following information from the lease document images.
+Return a JSON object matching this schema:
+{schema.model_json_schema()}
+
+Be precise and extract exactly what is stated in the document."""
 ```
 
 ### Exporter
@@ -207,7 +239,7 @@ class JSONExporter(BaseExtractionExporter):
         super().__init__(config)
         self.config = config
 
-    async def export(self, document: Document, data: InvoiceSchema) -> None:
+    async def export(self, document: Document, data: LeaseSchema) -> None:
         output_dir = Path(self.config.output_directory)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -222,7 +254,7 @@ class JSONExporter(BaseExtractionExporter):
 ## Step 3: Create Configuration Files
 
 ```yaml title="config/yaml/file_lister.yaml"
-input_directory: "./data/invoices"
+input_directory: "./data/leases"
 file_pattern: "*.pdf"
 ```
 
@@ -231,7 +263,7 @@ dpi: 300
 ```
 
 ```yaml title="config/yaml/extractor.yaml"
-model_name: "gpt-4"
+model_name: "gemini-1.5-flash"
 temperature: 0.0
 ```
 
@@ -258,7 +290,7 @@ async def main():
         lister_config_cls=LocalFileListerConfig,
         reader_config_cls=LocalReaderConfig,
         converter_config_cls=PDFConverterConfig,
-        extractor_config_cls=LLMExtractorConfig,
+        extractor_config_cls=GeminiExtractorConfig,
         exporter_config_cls=JSONExporterConfig,
         orchestrator_config_cls=ExtractionOrchestratorConfig,
         config_dir=Path("config/yaml"),
@@ -267,10 +299,10 @@ async def main():
     # Create orchestrator
     orchestrator = ExtractionOrchestrator.from_config(
         config=config,
-        schema=InvoiceSchema,
+        schema=LeaseSchema,
         reader_cls=LocalReader,
         converter_cls=PDFConverter,
-        extractor_cls=LLMExtractor,
+        extractor_cls=GeminiImageExtractor,
         exporter_cls=JSONExporter,
     )
 
@@ -278,7 +310,7 @@ async def main():
     file_lister = LocalFileLister(config.file_lister)
     file_paths = file_lister.list_files()
 
-    print(f"Processing {len(file_paths)} files...")
+    print(f"Processing {len(file_paths)} lease documents...")
 
     # Run pipeline
     await orchestrator.run(file_paths)
@@ -293,4 +325,4 @@ if __name__ == "__main__":
 ## Next Steps
 
 - Add [Evaluation](implementing-evaluation.md) to measure extraction quality
-- See the [Examples Repository](https://github.com/artefactory-uk/document-extraction-examples) for complete implementations
+- See the [Examples Repository](https://github.com/artefactory-uk/document-extraction-examples) for the complete Simple Lease Extraction implementation

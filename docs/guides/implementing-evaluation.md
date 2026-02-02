@@ -10,25 +10,43 @@ This guide walks through setting up evaluation to measure extraction quality.
 
 ## Step 1: Prepare Ground Truth Data
 
-Create a dataset with known correct extractions:
+Create a dataset with known correct extractions. This example shows lease data similar to the [examples repository](https://github.com/artefactory-uk/document-extraction-examples):
 
 ```json title="data/evaluation/ground_truth.json"
 [
   {
-    "file_path": "data/invoices/invoice_001.pdf",
+    "file_path": "data/leases/lease_001.pdf",
     "ground_truth": {
-      "invoice_id": "INV-2024-001",
-      "vendor": "Acme Corporation",
-      "total": 1500.00,
+      "landlord_name": "John Smith",
+      "tenant_name": "Jane Doe",
+      "property_address": {
+        "street": "123 Main Street",
+        "city": "San Francisco",
+        "state": "CA",
+        "postal_code": "94102"
+      },
+      "lease_start_date": "2024-01-01",
+      "lease_end_date": "2024-12-31",
+      "monthly_rent": 2500.00,
+      "security_deposit": 5000.00,
       "currency": "USD"
     }
   },
   {
-    "file_path": "data/invoices/invoice_002.pdf",
+    "file_path": "data/leases/lease_002.pdf",
     "ground_truth": {
-      "invoice_id": "INV-2024-002",
-      "vendor": "Tech Solutions Inc",
-      "total": 3250.75,
+      "landlord_name": "ABC Properties LLC",
+      "tenant_name": "Bob Wilson",
+      "property_address": {
+        "street": "456 Oak Avenue, Unit 2B",
+        "city": "Los Angeles",
+        "state": "CA",
+        "postal_code": "90001"
+      },
+      "lease_start_date": "2024-03-15",
+      "lease_end_date": "2025-03-14",
+      "monthly_rent": 1800.00,
+      "security_deposit": 3600.00,
       "currency": "USD"
     }
   }
@@ -49,13 +67,13 @@ class JSONTestDataLoaderConfig(BaseTestDataLoaderConfig):
     pass  # Uses path_identifier to find the JSON file
 
 
-class JSONTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
+class JSONTestDataLoader(BaseTestDataLoader[LeaseSchema]):
     def __init__(self, config: JSONTestDataLoaderConfig) -> None:
         super().__init__(config)
 
     def load_test_data(
         self, path_identifier: PathIdentifier
-    ) -> list[EvaluationExample[InvoiceSchema]]:
+    ) -> list[EvaluationExample[LeaseSchema]]:
         with open(path_identifier.path) as f:
             data = json.load(f)
 
@@ -64,7 +82,7 @@ class JSONTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
             examples.append(EvaluationExample(
                 id=item["file_path"],
                 path_identifier=PathIdentifier(path=item["file_path"]),
-                true=InvoiceSchema(**item["ground_truth"])
+                true=LeaseSchema(**item["ground_truth"])
             ))
 
         return examples
@@ -76,6 +94,8 @@ Create one or more evaluators to measure different aspects of quality.
 
 ### Field Accuracy Evaluator
 
+The [examples repository](https://github.com/artefactory-uk/document-extraction-examples) includes accuracy and F1 evaluators. Here's a field accuracy evaluator:
+
 ```python
 from document_extraction_tools.base import BaseEvaluator
 from document_extraction_tools.config import BaseEvaluatorConfig
@@ -86,14 +106,14 @@ class FieldAccuracyEvaluatorConfig(BaseEvaluatorConfig):
     pass
 
 
-class FieldAccuracyEvaluator(BaseEvaluator[InvoiceSchema]):
+class FieldAccuracyEvaluator(BaseEvaluator[LeaseSchema]):
     """Measures percentage of fields that exactly match."""
 
     def __init__(self, config: FieldAccuracyEvaluatorConfig) -> None:
         super().__init__(config)
 
     def evaluate(
-        self, true: InvoiceSchema, pred: InvoiceSchema
+        self, true: LeaseSchema, pred: LeaseSchema
     ) -> EvaluationResult:
         fields = list(true.model_fields.keys())
         correct = sum(
@@ -117,27 +137,27 @@ class NumericToleranceEvaluatorConfig(BaseEvaluatorConfig):
     tolerance: float = 0.01  # 1% tolerance
 
 
-class NumericToleranceEvaluator(BaseEvaluator[InvoiceSchema]):
-    """Checks if numeric fields are within tolerance."""
+class NumericToleranceEvaluator(BaseEvaluator[LeaseSchema]):
+    """Checks if numeric fields (rent, deposit) are within tolerance."""
 
     def __init__(self, config: NumericToleranceEvaluatorConfig) -> None:
         super().__init__(config)
         self.config = config
 
     def evaluate(
-        self, true: InvoiceSchema, pred: InvoiceSchema
+        self, true: LeaseSchema, pred: LeaseSchema
     ) -> EvaluationResult:
-        # Check total field
-        if true.total == 0:
-            within_tolerance = pred.total == 0
+        # Check monthly_rent field
+        if true.monthly_rent == 0:
+            within_tolerance = pred.monthly_rent == 0
         else:
-            relative_error = abs(true.total - pred.total) / true.total
+            relative_error = abs(true.monthly_rent - pred.monthly_rent) / true.monthly_rent
             within_tolerance = relative_error <= self.config.tolerance
 
         return EvaluationResult(
-            name="total_within_tolerance",
+            name="rent_within_tolerance",
             result=1.0 if within_tolerance else 0.0,
-            description=f"Total {'within' if within_tolerance else 'outside'} {self.config.tolerance:.1%} tolerance"
+            description=f"Rent {'within' if within_tolerance else 'outside'} {self.config.tolerance:.1%} tolerance"
         )
 ```
 
@@ -148,10 +168,10 @@ from difflib import SequenceMatcher
 
 
 class StringSimilarityEvaluatorConfig(BaseEvaluatorConfig):
-    field_name: str = "vendor"
+    field_name: str = "landlord_name"
 
 
-class StringSimilarityEvaluator(BaseEvaluator[InvoiceSchema]):
+class StringSimilarityEvaluator(BaseEvaluator[LeaseSchema]):
     """Measures string similarity for a specific field."""
 
     def __init__(self, config: StringSimilarityEvaluatorConfig) -> None:
@@ -159,7 +179,7 @@ class StringSimilarityEvaluator(BaseEvaluator[InvoiceSchema]):
         self.config = config
 
     def evaluate(
-        self, true: InvoiceSchema, pred: InvoiceSchema
+        self, true: LeaseSchema, pred: LeaseSchema
     ) -> EvaluationResult:
         true_value = getattr(true, self.config.field_name, "")
         pred_value = getattr(pred, self.config.field_name, "")
@@ -246,7 +266,7 @@ NumericToleranceEvaluatorConfig:
   tolerance: 0.01
 
 StringSimilarityEvaluatorConfig:
-  field_name: "vendor"
+  field_name: "landlord_name"
 ```
 
 ```yaml title="config/yaml/evaluation_exporter.yaml"
@@ -281,7 +301,7 @@ async def main():
         ],
         reader_config_cls=LocalReaderConfig,
         converter_config_cls=PDFConverterConfig,
-        extractor_config_cls=LLMExtractorConfig,
+        extractor_config_cls=GeminiExtractorConfig,
         evaluation_exporter_config_cls=CSVEvaluationExporterConfig,
         orchestrator_config_cls=EvaluationOrchestratorConfig,
         config_dir=Path("config/yaml"),
@@ -290,10 +310,10 @@ async def main():
     # Create orchestrator
     orchestrator = EvaluationOrchestrator.from_config(
         config=config,
-        schema=InvoiceSchema,
+        schema=LeaseSchema,
         reader_cls=LocalReader,
         converter_cls=PDFConverter,
-        extractor_cls=LLMExtractor,
+        extractor_cls=GeminiImageExtractor,
         test_data_loader_cls=JSONTestDataLoader,
         evaluator_classes=[
             FieldAccuracyEvaluator,
@@ -309,7 +329,7 @@ async def main():
         PathIdentifier(path="data/evaluation/ground_truth.json")
     )
 
-    print(f"Evaluating {len(examples)} examples...")
+    print(f"Evaluating {len(examples)} lease documents...")
 
     # Run evaluation
     await orchestrator.run(examples)
