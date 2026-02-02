@@ -39,7 +39,7 @@ wheels = [
 
 [[package]]
 name = "document-extraction-tools"
-version = "0.0.0"
+version = "0.0.1rc1"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
