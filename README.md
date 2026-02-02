@@ -436,7 +436,7 @@ asyncio.run(orchestrator.run(examples))
 1. Create a release branch and bump version:
    ```bash
    git checkout -b release/v0.2.0-rc1
-   uv version --bump prerelease
+   uv version --bump rc
    # Or manually: uv version 0.2.0-rc1
    ```
 
