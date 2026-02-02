@@ -8,6 +8,7 @@ This repo is intentionally implementation-light: you plug in your own components
 
 - [document-extraction-tools](#document-extraction-tools)
   - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
   - [Project layout](#project-layout)
   - [What this library gives you](#what-this-library-gives-you)
   - [Core concepts and components](#core-concepts-and-components)
@@ -28,6 +29,20 @@ This repo is intentionally implementation-light: you plug in your own components
   - [Development](#development)
   - [Releasing](#releasing)
   - [Contributing](#contributing)
+
+## Installation
+
+Install from PyPI:
+
+```bash
+pip install document-extraction-tools
+```
+
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv add document-extraction-tools
+```
 
 ## Project layout
 
