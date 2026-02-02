@@ -26,6 +26,7 @@ This repo is intentionally implementation-light: you plug in your own components
     - [3) Load config and run the pipeline](#3-load-config-and-run-the-pipeline)
   - [Concurrency model](#concurrency-model)
   - [Development](#development)
+  - [Releasing](#releasing)
   - [Contributing](#contributing)
 
 ## Project layout
@@ -427,6 +428,71 @@ asyncio.run(orchestrator.run(examples))
 - Install dependencies: `uv sync`
 - Run pre-commit: `uv run pre-commit run --all-files`
 - Run tests: `uv run pytest`
+
+## Releasing
+
+### Test release (TestPyPI)
+
+1. Create a release branch and bump version:
+   ```bash
+   git checkout -b release/v0.2.0-rc1
+   uv version --bump rc
+   # Or manually: uv version 0.2.0-rc1
+   ```
+
+2. Commit and push the branch:
+   ```bash
+   VERSION=$(uv version --short)
+   git add pyproject.toml
+   git commit -m "Bump version to $VERSION"
+   git push -u origin release/v$VERSION
+   ```
+
+3. Create and merge a PR to main.
+
+4. Tag the merge commit and push:
+   ```bash
+   git checkout main && git pull
+   VERSION=$(uv version --short)
+   git tag "v$VERSION"
+   git push --tags
+   ```
+
+5. The `publish-test.yaml` workflow automatically publishes to TestPyPI.
+
+6. Verify installation:
+   ```bash
+   uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ document-extraction-tools
+   ```
+
+### Production release (PyPI)
+
+1. Create a release branch and bump version:
+   ```bash
+   git checkout -b release/v0.2.0
+   uv version --bump minor  # or: major, minor, patch
+   ```
+
+2. Commit and push the branch:
+   ```bash
+   VERSION=$(uv version --short)
+   git add pyproject.toml
+   git commit -m "Bump version to $VERSION"
+   git push -u origin release/v$VERSION
+   ```
+
+3. Create and merge a PR to main.
+
+4. Tag the merge commit and create the release:
+   ```bash
+   git checkout main && git pull
+   VERSION=$(uv version --short)
+   git tag "v$VERSION"
+   git push --tags
+   gh release create "v$VERSION" --title "v$VERSION" --generate-notes
+   ```
+
+5. The `publish.yaml` workflow automatically builds, publishes to PyPI, and runs smoke tests.
 
 ## Contributing
 
