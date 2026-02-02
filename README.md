@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/document-extraction-tools.svg)](https://pypi.org/project/document-extraction-tools/)
 [![Python versions](https://img.shields.io/pypi/pyversions/document-extraction-tools.svg)](https://pypi.org/project/document-extraction-tools/)
 [![License](https://img.shields.io/pypi/l/document-extraction-tools.svg)](https://github.com/artefactory-uk/document-extraction-tools/blob/main/LICENSE)
-[![CI](https://github.com/artefactory-uk/document-extraction-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/artefactory-uk/document-extraction-tools/actions/workflows/ci.yml)
+[![CI](https://github.com/artefactory-uk/document-extraction-tools/actions/workflows/run-precommit-and-tests.yaml/badge.svg)](https://github.com/artefactory-uk/document-extraction-tools/actions/workflows/run-precommit-and-tests.yaml)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://artefactory-uk.github.io/document-extraction-tools/)
 
 A modular, high-performance toolkit for building document extraction pipelines. The library provides clear interfaces for every pipeline stage, plus orchestrators that wire the stages together with async I/O and CPU-bound parallelism.
