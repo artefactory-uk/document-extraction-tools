@@ -1,6 +1,6 @@
 [project]
 name = "document-extraction-tools"
-dynamic = ["version"]
+version = "0.0.0"
 description = "A modular, high-performance toolkit for extracting structured data from documents."
 authors = [
   { name = "Ollie Kemp", email = "oliver.kemp@artefact.com" },
@@ -95,8 +95,6 @@ known-first-party = ["document-extraction-tools"] # enter your module name here,
 requires = ["uv_build>=0.9.9,<0.10.0"]
 build-backend = "uv_build"
 
-[tool.uv_build]
-version-source = "git-tag"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

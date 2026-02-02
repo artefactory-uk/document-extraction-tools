@@ -26,6 +26,7 @@ This repo is intentionally implementation-light: you plug in your own components
     - [3) Load config and run the pipeline](#3-load-config-and-run-the-pipeline)
   - [Concurrency model](#concurrency-model)
   - [Development](#development)
+  - [Releasing](#releasing)
   - [Contributing](#contributing)
 
 ## Project layout
@@ -427,6 +428,53 @@ asyncio.run(orchestrator.run(examples))
 - Install dependencies: `uv sync`
 - Run pre-commit: `uv run pre-commit run --all-files`
 - Run tests: `uv run pytest`
+
+## Releasing
+
+### Test release (TestPyPI)
+
+1. Update version in `pyproject.toml`:
+   ```bash
+   # Manually edit or use:
+   uv version 0.2.0-rc1
+   ```
+
+2. Commit, tag, and push:
+   ```bash
+   git add pyproject.toml
+   git commit -m "Bump version to 0.2.0-rc1"
+   git tag v0.2.0-rc1
+   git push && git push --tags
+   ```
+
+3. The `publish-test.yaml` workflow automatically publishes to TestPyPI.
+
+4. Verify installation:
+   ```bash
+   uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ document-extraction-tools
+   ```
+
+### Production release (PyPI)
+
+1. Update version in `pyproject.toml`:
+   ```bash
+   uv version 0.2.0
+   ```
+
+2. Commit, tag, and push:
+   ```bash
+   git add pyproject.toml
+   git commit -m "Bump version to 0.2.0"
+   git tag v0.2.0
+   git push && git push --tags
+   ```
+
+3. Create a GitHub Release from the tag (via GitHub UI or CLI):
+   ```bash
+   gh release create v0.2.0 --title "v0.2.0" --generate-notes
+   ```
+
+4. The `publish.yaml` workflow automatically builds, publishes to PyPI, and runs smoke tests.
 
 ## Contributing
 
