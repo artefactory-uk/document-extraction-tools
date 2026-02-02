@@ -38,7 +38,7 @@ Issues = "https://github.com/artefactory-uk/document-extraction-tools/issues"
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.0,<9.0",
+  "pytest>=8.0,<10.0",
   "pytest-asyncio>=1.3.0",
   "pre-commit>=3.3,<4.0",
   # Add other development dependencies here
