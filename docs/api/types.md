@@ -10,8 +10,11 @@ from document_extraction_tools.types import (
     DocumentBytes,
     Document,
     Page,
+    TextData,
+    ImageData,
     EvaluationExample,
     EvaluationResult,
+    ExtractionSchema,
 )
 ```
 
@@ -39,6 +42,27 @@ from document_extraction_tools.types import (
 ## Page
 
 ::: document_extraction_tools.types.Page
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+## TextData
+
+::: document_extraction_tools.types.TextData
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+## ImageData
+
+::: document_extraction_tools.types.ImageData
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+## ExtractionSchema
+
+::: document_extraction_tools.types.ExtractionSchema
     options:
       show_root_heading: true
       heading_level: 3

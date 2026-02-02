@@ -101,11 +101,12 @@ from document_extraction_tools.types import Document, DocumentBytes
 class MyConverter(BaseConverter):
     def convert(self, document_bytes: DocumentBytes) -> Document:
         # Use PDF library, OCR engine, etc.
-        pages = parse_pdf(document_bytes.bytes)
+        pages = parse_pdf(document_bytes.file_bytes)
         return Document(
+            id=str(document_bytes.path_identifier.path),
             path_identifier=document_bytes.path_identifier,
             pages=pages,
-            content_type="text"
+            content_type="text",
         )
 ```
 

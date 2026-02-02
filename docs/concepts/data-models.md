@@ -31,26 +31,78 @@ doc_bytes = DocumentBytes(
 )
 ```
 
+### TextData
+
+Encapsulates textual content for a page:
+
+```python
+from document_extraction_tools.types import TextData
+
+text_data = TextData(content="Invoice #12345...")
+```
+
+### ImageData
+
+Encapsulates image content in various formats (bytes, PIL Image, or NumPy array):
+
+```python
+from document_extraction_tools.types import ImageData
+
+# From raw bytes
+image_data = ImageData(content=raw_image_bytes)
+
+# Or from PIL Image
+from PIL import Image
+image_data = ImageData(content=Image.open("page.png"))
+
+# Or from NumPy array
+import numpy as np
+image_data = ImageData(content=np.array(...))
+```
+
+### Page
+
+Represents a single page within a document:
+
+```python
+from document_extraction_tools.types import Page, TextData, ImageData
+
+# Text page
+text_page = Page(
+    page_number=1,
+    data=TextData(content="Invoice #12345..."),
+)
+
+# Image page
+image_page = Page(
+    page_number=1,
+    data=ImageData(content=image_bytes),
+)
+```
+
 ### Document
 
 Parsed document with pages, content, and metadata:
 
 ```python
-from document_extraction_tools.types import Document, Page
+from document_extraction_tools.types import Document, Page, TextData
 
 document = Document(
+    id="doc-001",
     path_identifier=path_identifier,
     pages=[
         Page(
             page_number=1,
-            text="Invoice #12345...",
+            data=TextData(content="Invoice #12345..."),
         )
     ],
     content_type="text",
-    metadata={"page_count": 1}
-    
+    metadata={"page_count": 1},
 )
 ```
+
+!!! note "Content Type Validation"
+    The `Document` model validates that all page data types match the declared `content_type`. If `content_type` is `"text"`, all pages must contain `TextData`. If `content_type` is `"image"`, all pages must contain `ImageData`.
 
 ### ExtractionSchema
 

@@ -109,9 +109,9 @@ class LocalReader(BaseReader):
 
         with open(path, "rb") as f:
             return DocumentBytes(
-                bytes=f.read(),
+                file_bytes=f.read(),
                 mime_type=mime_type,
-                path_identifier=path_identifier
+                path_identifier=path_identifier,
             )
 ```
 
@@ -134,13 +134,14 @@ class PDFConverter(BaseConverter):
 
     def convert(self, document_bytes: DocumentBytes) -> Document:
         # Use your preferred PDF library (pypdf, pymupdf, etc.)
-        pages = self._parse_pdf(document_bytes.bytes)
+        pages = self._parse_pdf(document_bytes.file_bytes)
 
         return Document(
+            id=str(document_bytes.path_identifier.path),
             path_identifier=document_bytes.path_identifier,
             pages=pages,
             metadata={"page_count": len(pages)},
-            content_type="image"
+            content_type="image",
         )
 
     def _parse_pdf(self, pdf_bytes: bytes) -> list[Page]:

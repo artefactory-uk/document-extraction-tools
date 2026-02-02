@@ -89,9 +89,9 @@ class MyTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
         examples = []
         for row in load_ground_truth_data():
             examples.append(EvaluationExample(
-                id=row["file_path"]
+                id=row["file_path"],
                 path_identifier=PathIdentifier(path=row["file_path"]),
-                true=InvoiceSchema(**row["true"])
+                true=InvoiceSchema(**row["true"]),
             ))
         return examples
 ```
