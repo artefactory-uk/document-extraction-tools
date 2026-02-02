@@ -1,4 +1,10 @@
-# document-extraction-tools
+# Document Extraction Tools
+
+[![PyPI version](https://img.shields.io/pypi/v/document-extraction-tools.svg)](https://pypi.org/project/document-extraction-tools/)
+[![Python versions](https://img.shields.io/pypi/pyversions/document-extraction-tools.svg)](https://pypi.org/project/document-extraction-tools/)
+[![License](https://img.shields.io/pypi/l/document-extraction-tools.svg)](https://github.com/artefactory-uk/document-extraction-tools/blob/main/LICENSE)
+[![CI](https://github.com/artefactory-uk/document-extraction-tools/actions/workflows/run-precommit-and-tests.yaml/badge.svg)](https://github.com/artefactory-uk/document-extraction-tools/actions/workflows/run-precommit-and-tests.yaml)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://artefactory-uk.github.io/document-extraction-tools/)
 
 A modular, high-performance toolkit for building document extraction pipelines. The library provides clear interfaces for every pipeline stage, plus orchestrators that wire the stages together with async I/O and CPU-bound parallelism.
 
@@ -9,6 +15,7 @@ This repo is intentionally implementation-light: you plug in your own components
 - [document-extraction-tools](#document-extraction-tools)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
+  - [Documentation](#documentation)
   - [Project layout](#project-layout)
   - [What this library gives you](#what-this-library-gives-you)
   - [Core concepts and components](#core-concepts-and-components)
@@ -44,12 +51,21 @@ Or with [uv](https://docs.astral.sh/uv/):
 uv add document-extraction-tools
 ```
 
+## Documentation
+
+**[Read the full documentation](https://artefactory-uk.github.io/document-extraction-tools/)**
+
+- [Installation Guide](https://artefactory-uk.github.io/document-extraction-tools/getting-started/installation/)
+- [Quick Start Tutorial](https://artefactory-uk.github.io/document-extraction-tools/getting-started/quickstart/)
+- [Core Concepts](https://artefactory-uk.github.io/document-extraction-tools/concepts/overview/)
+- [API Reference](https://artefactory-uk.github.io/document-extraction-tools/api/base-classes/)
+
 ## Project layout
 
 ```bash
 .
-├── src                               
-│   └── document_extraction_tools     
+├── src
+│   └── document_extraction_tools
 │       ├── base                      # abstract base classes you implement
 │       │   ├── converter             # conversion interface definitions
 │       │   ├── evaluator             # evaluation interface definitions
@@ -63,12 +79,12 @@ uv add document-extraction-tools
 │       │   ├── evaluation            # evaluation pipeline orchestration
 │       │   └── extraction            # extraction pipeline orchestration
 │       ├── types                     # shared models/types used across modules
-│       └── py.typed                  
-├── tests                             
-├── pull_request_template.md          
-├── pyproject.toml                    
-├── README.md                         
-└── uv.lock                           
+│       └── py.typed
+├── tests
+├── pull_request_template.md
+├── pyproject.toml
+├── README.md
+└── uv.lock
 ```
 
 ## What this library gives you
@@ -128,7 +144,7 @@ uv add document-extraction-tools
 ### Configuration
 
 Each component has a matching **base config class** (Pydantic model) that defines a
-default YAML filename and acts as the parent for your own config fields. You’ll subclass
+default YAML filename and acts as the parent for your own config fields. You'll subclass
 these to add settings specific to your implementation.
 
 Extraction config base classes:
@@ -149,7 +165,7 @@ Evaluation specific config base classes:
 
 ## How to implement an extraction pipeline
 
-For a full worked example including evaluation, please see [the document-extraction-examples](https://github.com/artefactory-uk/document-extraction-examples) repository. Below we outline the steps for a successful implementation. 
+For a full worked example including evaluation, please see [the document-extraction-examples](https://github.com/artefactory-uk/document-extraction-examples) repository. Below we outline the steps for a successful implementation.
 
 ### 1) Define your extraction schema
 
@@ -440,9 +456,19 @@ asyncio.run(orchestrator.run(examples))
 
 ## Development
 
-- Install dependencies: `uv sync`
-- Run pre-commit: `uv run pre-commit run --all-files`
-- Run tests: `uv run pytest`
+```bash
+# Install dependencies
+uv sync
+
+# Run pre-commit
+uv run pre-commit run --all-files
+
+# Run tests
+uv run pytest
+
+# Build and preview docs locally
+uv run mkdocs serve
+```
 
 ## Releasing
 
@@ -511,11 +537,11 @@ asyncio.run(orchestrator.run(examples))
 
 ## Contributing
 
-Contributions are welcome. Please:
+Contributions are welcome! Please see our [Contributing Guide](https://artefactory-uk.github.io/document-extraction-tools/contributing/) for details.
 
-- Report bugs or feature requests by opening an issue.
+- Report bugs or feature requests by [opening an issue](https://github.com/artefactory-uk/document-extraction-tools/issues).
 - Create a new branch using the following naming conventions: `feat/short-description`, `fix/short-description`, etc.
 - Describe the change clearly in the PR description.
 - Add or update tests in `tests/`.
 - Run linting and tests before pushing: `uv run pre-commit run --all-files` and `uv run pytest`.
-- If you open a PR, please notify the maintainers ([Ollie Kemp]( https://github.com/ollie-artefact) or [Nikolas Moatsos](https://github.com/nmoatsos)).
+- If you open a PR, please notify the maintainers ([Ollie Kemp](https://github.com/ollie-artefact) or [Nikolas Moatsos](https://github.com/nmoatsos)).

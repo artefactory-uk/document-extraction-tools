@@ -40,5 +40,13 @@ jobs:
       - name: Run pre-commit
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
-      - name: Run tests
-        run: uv run pytest
+      - name: Run tests with coverage
+        run: uv run pytest --cov=src/document_extraction_tools --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

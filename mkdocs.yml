@@ -1,0 +1,112 @@
+site_name: Document Extraction Tools
+site_url: https://artefactory-uk.github.io/document-extraction-tools/
+site_description: A modular, high-performance toolkit for building document extraction pipelines.
+site_author: Artefact UK
+
+repo_name: artefactory-uk/document-extraction-tools
+repo_url: https://github.com/artefactory-uk/document-extraction-tools
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            merge_init_into_class: true
+            show_signature_annotations: true
+            separate_signature: true
+            show_if_no_docstring: true
+            members: true
+            filters: ["!^_"]
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+  - Concepts:
+      - Overview: concepts/overview.md
+      - Data Models: concepts/data-models.md
+      - Extraction Pipeline: concepts/extraction-pipeline.md
+      - Evaluation Pipeline: concepts/evaluation-pipeline.md
+      - Configuration: concepts/configuration.md
+  - Guides:
+      - Implementing Extraction: guides/implementing-extraction.md
+      - Implementing Evaluation: guides/implementing-evaluation.md
+  - Examples: examples.md
+  - API Reference:
+      - Base Classes: api/base-classes.md
+      - Configuration: api/configuration.md
+      - Types: api/types.md
+  - Contributing: contributing.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/artefactory-uk/document-extraction-tools
+
+copyright: Copyright &copy; 2025 Artefact UK

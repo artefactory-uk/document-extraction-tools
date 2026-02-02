@@ -32,6 +32,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/artefactory-uk/document-extraction-tools"
+Documentation = "https://artefactory-uk.github.io/document-extraction-tools/"
 Repository = "https://github.com/artefactory-uk/document-extraction-tools"
 Issues = "https://github.com/artefactory-uk/document-extraction-tools/issues"
 
@@ -109,6 +110,15 @@ known-first-party = ["document-extraction-tools"] # enter your module name here,
 [build-system]
 requires = ["uv_build>=0.9.9,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.1",
+    "mkdocstrings>=1.0.2",
+    "mkdocstrings-python>=2.0.1",
+    "pytest-cov>=7.0.0",
+]
 
 
 [tool.pytest.ini_options]
