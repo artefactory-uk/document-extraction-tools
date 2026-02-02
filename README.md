@@ -433,17 +433,18 @@ asyncio.run(orchestrator.run(examples))
 
 ### Test release (TestPyPI)
 
-1. Update version in `pyproject.toml`:
+1. Bump version with a prerelease suffix:
    ```bash
-   # Manually edit or use:
-   uv version 0.2.0-rc1
+   uv version --bump prerelease
+   # Or manually: uv version 0.2.0-rc1
    ```
 
 2. Commit, tag, and push:
    ```bash
+   VERSION=$(uv version --short)
    git add pyproject.toml
-   git commit -m "Bump version to 0.2.0-rc1"
-   git tag v0.2.0-rc1
+   git commit -m "Bump version to $VERSION"
+   git tag "v$VERSION"
    git push && git push --tags
    ```
 
@@ -456,22 +457,24 @@ asyncio.run(orchestrator.run(examples))
 
 ### Production release (PyPI)
 
-1. Update version in `pyproject.toml`:
+1. Bump version in `pyproject.toml`:
    ```bash
-   uv version 0.2.0
+   uv version --bump minor  # or: major, minor, patch
    ```
 
 2. Commit, tag, and push:
    ```bash
+   VERSION=$(uv version --short)
    git add pyproject.toml
-   git commit -m "Bump version to 0.2.0"
-   git tag v0.2.0
+   git commit -m "Bump version to $VERSION"
+   git tag "v$VERSION"
    git push && git push --tags
    ```
 
 3. Create a GitHub Release from the tag (via GitHub UI or CLI):
    ```bash
-   gh release create v0.2.0 --title "v0.2.0" --generate-notes
+   VERSION=$(uv version --short)
+   gh release create "v$VERSION" --title "v$VERSION" --generate-notes
    ```
 
 4. The `publish.yaml` workflow automatically builds, publishes to PyPI, and runs smoke tests.
