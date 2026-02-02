@@ -56,7 +56,7 @@ class MyReader(BaseReader):
     def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
         with open(path_identifier.path, "rb") as f:
             return DocumentBytes(
-                bytes=f.read(),
+                file_bytes=f.read(),
                 mime_type="application/pdf",
                 path_identifier=path_identifier,
             )

@@ -62,8 +62,9 @@ class JSONTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
         examples = []
         for item in data:
             examples.append(EvaluationExample(
+                id=item["file_path"],
                 path_identifier=PathIdentifier(path=item["file_path"]),
-                ground_truth=InvoiceSchema(**item["ground_truth"])
+                true=InvoiceSchema(**item["ground_truth"])
             ))
 
         return examples

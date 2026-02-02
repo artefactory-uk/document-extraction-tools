@@ -25,7 +25,7 @@ Raw bytes with MIME type and source information:
 from document_extraction_tools.types import DocumentBytes
 
 doc_bytes = DocumentBytes(
-    bytes=raw_bytes,
+    file_bytes=raw_bytes,
     mime_type="application/pdf",
     path_identifier=path_identifier,
 )
@@ -44,10 +44,11 @@ document = Document(
         Page(
             page_number=1,
             text="Invoice #12345...",
-            image=image_array,  # numpy array
         )
     ],
+    content_type="text",
     metadata={"page_count": 1}
+    
 )
 ```
 
@@ -74,8 +75,9 @@ A ground truth + file path pair for evaluation:
 from document_extraction_tools.types import EvaluationExample
 
 example = EvaluationExample(
+    id="/data/test/invoice_001.pdf",
     path_identifier=PathIdentifier(path="/data/test/invoice_001.pdf"),
-    ground_truth=InvoiceSchema(
+    true=InvoiceSchema(
         invoice_id="12345",
         vendor="Acme Corp",
         total=1500.00

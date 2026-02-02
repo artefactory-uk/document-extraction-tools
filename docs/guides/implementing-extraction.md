@@ -111,7 +111,7 @@ class LocalReader(BaseReader):
             return DocumentBytes(
                 bytes=f.read(),
                 mime_type=mime_type,
-                path_identifier=path_identifier,
+                path_identifier=path_identifier
             )
 ```
 
@@ -139,7 +139,8 @@ class PDFConverter(BaseConverter):
         return Document(
             path_identifier=document_bytes.path_identifier,
             pages=pages,
-            metadata={"page_count": len(pages)}
+            metadata={"page_count": len(pages)},
+            content_type="image"
         )
 
     def _parse_pdf(self, pdf_bytes: bytes) -> list[Page]:
