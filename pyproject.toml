@@ -1,7 +1,17 @@
 [project]
 name = "document-extraction-tools"
-version = "0.0.1rc1"
+version = "0.1.0"
 description = "A modular, high-performance toolkit for extracting structured data from documents."
+readme = "README.md"
+license = "MIT"
+keywords = ["document", "extraction", "pdf", "ocr"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
 authors = [
   { name = "Ollie Kemp", email = "oliver.kemp@artefact.com" },
   { name = "Nikolas Moatsos", email = "nikolas.moatsos@artefact.com" }
@@ -19,6 +29,11 @@ dependencies = [
   "numpy>=2.4.1",
   "pillow>=12.1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/artefactory-uk/document-extraction-tools"
+Repository = "https://github.com/artefactory-uk/document-extraction-tools"
+Issues = "https://github.com/artefactory-uk/document-extraction-tools/issues"
 
 [project.optional-dependencies]
 dev = [
