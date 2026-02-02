@@ -433,51 +433,66 @@ asyncio.run(orchestrator.run(examples))
 
 ### Test release (TestPyPI)
 
-1. Bump version with a prerelease suffix:
+1. Create a release branch and bump version:
    ```bash
+   git checkout -b release/v0.2.0-rc1
    uv version --bump prerelease
    # Or manually: uv version 0.2.0-rc1
    ```
 
-2. Commit, tag, and push:
+2. Commit and push the branch:
    ```bash
    VERSION=$(uv version --short)
    git add pyproject.toml
    git commit -m "Bump version to $VERSION"
-   git tag "v$VERSION"
-   git push && git push --tags
+   git push -u origin release/v$VERSION
    ```
 
-3. The `publish-test.yaml` workflow automatically publishes to TestPyPI.
+3. Create and merge a PR to main.
 
-4. Verify installation:
+4. Tag the merge commit and push:
+   ```bash
+   git checkout main && git pull
+   VERSION=$(uv version --short)
+   git tag "v$VERSION"
+   git push --tags
+   ```
+
+5. The `publish-test.yaml` workflow automatically publishes to TestPyPI.
+
+6. Verify installation:
    ```bash
    uv pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ document-extraction-tools
    ```
 
 ### Production release (PyPI)
 
-1. Bump version in `pyproject.toml`:
+1. Create a release branch and bump version:
    ```bash
+   git checkout -b release/v0.2.0
    uv version --bump minor  # or: major, minor, patch
    ```
 
-2. Commit, tag, and push:
+2. Commit and push the branch:
    ```bash
    VERSION=$(uv version --short)
    git add pyproject.toml
    git commit -m "Bump version to $VERSION"
-   git tag "v$VERSION"
-   git push && git push --tags
+   git push -u origin release/v$VERSION
    ```
 
-3. Create a GitHub Release from the tag (via GitHub UI or CLI):
+3. Create and merge a PR to main.
+
+4. Tag the merge commit and create the release:
    ```bash
+   git checkout main && git pull
    VERSION=$(uv version --short)
+   git tag "v$VERSION"
+   git push --tags
    gh release create "v$VERSION" --title "v$VERSION" --generate-notes
    ```
 
-4. The `publish.yaml` workflow automatically builds, publishes to PyPI, and runs smoke tests.
+5. The `publish.yaml` workflow automatically builds, publishes to PyPI, and runs smoke tests.
 
 ## Contributing
 
