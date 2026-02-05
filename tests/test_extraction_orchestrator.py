@@ -43,10 +43,27 @@ class DummySchema(BaseModel):
     value: str
 
 
+class DummyFileLister(BaseFileLister):
+    """File lister stub used for wiring tests."""
+
+    def __init__(
+        self,
+        config: BaseFileListerConfig | ExtractionPipelineConfig,
+    ) -> None:
+        """Initialize the file lister stub."""
+        super().__init__(config)
+
+    def list_files(
+        self, _context: PipelineContext | None = None
+    ) -> list[PathIdentifier]:
+        """Return an empty list for tests."""
+        return []
+
+
 class DummyReader(BaseReader):
     """Reader stub that records calls."""
 
-    def __init__(self, config: BaseReaderConfig) -> None:
+    def __init__(self, config: BaseReaderConfig | ExtractionPipelineConfig) -> None:
         """Initialize the reader stub."""
         super().__init__(config)
         self.read_calls: list[PathIdentifier] = []
@@ -59,14 +76,13 @@ class DummyReader(BaseReader):
         return DocumentBytes(
             file_bytes=b"data",
             path_identifier=path_identifier,
-            mime_type="text/plain",
         )
 
 
 class DummyConverter(BaseConverter):
     """Converter stub that records calls."""
 
-    def __init__(self, config: BaseConverterConfig) -> None:
+    def __init__(self, config: BaseConverterConfig | ExtractionPipelineConfig) -> None:
         """Initialize the converter stub."""
         super().__init__(config)
         self.convert_calls: list[DocumentBytes] = []
@@ -90,7 +106,11 @@ class DummyConverter(BaseConverter):
 class DummyExtractor(BaseExtractor):
     """Extractor stub that can be configured to fail."""
 
-    def __init__(self, config: BaseExtractorConfig, fail_on: str | None = None) -> None:
+    def __init__(
+        self,
+        config: BaseExtractorConfig | ExtractionPipelineConfig,
+        fail_on: str | None = None,
+    ) -> None:
         """Initialize the extractor stub with an optional failure id."""
         super().__init__(config)
         self.fail_on = fail_on
@@ -112,7 +132,10 @@ class DummyExtractor(BaseExtractor):
 class DummyExporter(BaseExtractionExporter):
     """Exporter stub that records calls."""
 
-    def __init__(self, config: BaseExtractionExporterConfig) -> None:
+    def __init__(
+        self,
+        config: BaseExtractionExporterConfig | ExtractionPipelineConfig,
+    ) -> None:
         """Initialize the exporter stub."""
         super().__init__(config)
         self.export_calls: list[tuple[Document, DummySchema]] = []
@@ -130,9 +153,7 @@ class DummyExporter(BaseExtractionExporter):
 def test_from_config_wires_components() -> None:
     """Instantiate and wire pipeline components from config."""
     config = ExtractionPipelineConfig(
-        extraction_orchestrator=ExtractionOrchestratorConfig(
-            max_workers=1, max_concurrency=2
-        ),
+        extraction_orchestrator=ExtractionOrchestratorConfig(),
         file_lister=BaseFileListerConfig(),
         reader=BaseReaderConfig(),
         converter=BaseConverterConfig(),
@@ -155,7 +176,6 @@ def test_from_config_wires_components() -> None:
     assert isinstance(orchestrator.converter, DummyConverter)
     assert isinstance(orchestrator.extractor, DummyExtractor)
     assert isinstance(orchestrator.extraction_exporter, DummyExporter)
-    assert orchestrator.config.max_workers == 1
     assert orchestrator.schema is DummySchema
 
 
@@ -180,13 +200,21 @@ async def test_run_in_executor_with_context_preserves_contextvars() -> None:
 @pytest.mark.asyncio
 async def test_process_document_runs_pipeline() -> None:
     """Run the full pipeline for a single document."""
-    reader = DummyReader(BaseReaderConfig())
-    converter = DummyConverter(BaseConverterConfig())
-    extractor = DummyExtractor(BaseExtractorConfig())
-    exporter = DummyExporter(BaseExtractionExporterConfig())
+    pipeline_config = ExtractionPipelineConfig(
+        extraction_orchestrator=ExtractionOrchestratorConfig(),
+        file_lister=BaseFileListerConfig(),
+        reader=BaseReaderConfig(),
+        converter=BaseConverterConfig(),
+        extractor=BaseExtractorConfig(),
+        extraction_exporter=BaseExtractionExporterConfig(),
+    )
+    reader = DummyReader(pipeline_config)
+    converter = DummyConverter(pipeline_config)
+    extractor = DummyExtractor(pipeline_config)
+    exporter = DummyExporter(pipeline_config)
     orchestrator = ExtractionOrchestrator(
-        config=ExtractionOrchestratorConfig(max_workers=1, max_concurrency=1),
-        file_lister=DummyFileLister(BaseFileListerConfig()),
+        config=pipeline_config.extraction_orchestrator,
+        file_lister=DummyFileLister(pipeline_config),
         reader=reader,
         converter=converter,
         extractor=extractor,
@@ -210,13 +238,21 @@ async def test_process_document_runs_pipeline() -> None:
 @pytest.mark.asyncio
 async def test_run_skips_failed_documents() -> None:
     """Skip exports when a document fails during processing."""
-    reader = DummyReader(BaseReaderConfig())
-    converter = DummyConverter(BaseConverterConfig())
-    extractor = DummyExtractor(BaseExtractorConfig(), fail_on="doc-fail")
-    exporter = DummyExporter(BaseExtractionExporterConfig())
+    pipeline_config = ExtractionPipelineConfig(
+        extraction_orchestrator=ExtractionOrchestratorConfig(),
+        file_lister=BaseFileListerConfig(),
+        reader=BaseReaderConfig(),
+        converter=BaseConverterConfig(),
+        extractor=BaseExtractorConfig(),
+        extraction_exporter=BaseExtractionExporterConfig(),
+    )
+    reader = DummyReader(pipeline_config)
+    converter = DummyConverter(pipeline_config)
+    extractor = DummyExtractor(pipeline_config, fail_on="doc-fail")
+    exporter = DummyExporter(pipeline_config)
     orchestrator = ExtractionOrchestrator(
-        config=ExtractionOrchestratorConfig(max_workers=2, max_concurrency=2),
-        file_lister=DummyFileLister(BaseFileListerConfig()),
+        config=pipeline_config.extraction_orchestrator,
+        file_lister=DummyFileLister(pipeline_config),
         reader=reader,
         converter=converter,
         extractor=extractor,
@@ -230,17 +266,3 @@ async def test_run_skips_failed_documents() -> None:
 
     exported_ids = {doc.id for doc, _ in exporter.export_calls}
     assert exported_ids == {"doc-ok"}
-
-
-class DummyFileLister(BaseFileLister):
-    """File lister stub used for wiring tests."""
-
-    def __init__(self, config: BaseFileListerConfig) -> None:
-        """Initialize the file lister stub."""
-        super().__init__(config)
-
-    def list_files(
-        self, _context: PipelineContext | None = None
-    ) -> list[PathIdentifier]:
-        """Return an empty list for tests."""
-        return []
