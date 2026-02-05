@@ -10,30 +10,61 @@ from abc import ABC, abstractmethod
 from document_extraction_tools.config.base_extraction_exporter_config import (
     BaseExtractionExporterConfig,
 )
+from document_extraction_tools.config.extraction_pipeline_config import (
+    ExtractionPipelineConfig,
+)
+from document_extraction_tools.types.context import PipelineContext
 from document_extraction_tools.types.document import Document
-from document_extraction_tools.types.schema import ExtractionSchema
+from document_extraction_tools.types.extraction_result import (
+    ExtractionResult,
+    ExtractionSchema,
+)
 
 
 class BaseExtractionExporter(ABC):
-    """Abstract interface for data persistence."""
+    """Abstract interface for data persistence.
 
-    def __init__(self, config: BaseExtractionExporterConfig) -> None:
+    Attributes:
+        config (BaseExtractionExporterConfig): Component-specific configuration.
+        pipeline_config (ExtractionPipelineConfig | None): Optional pipeline configuration
+            when constructed with a pipeline config.
+    """
+
+    config: BaseExtractionExporterConfig
+    pipeline_config: ExtractionPipelineConfig | None
+
+    def __init__(
+        self,
+        config: BaseExtractionExporterConfig | ExtractionPipelineConfig,
+    ) -> None:
         """Initialize with a configuration object.
 
         Args:
-            config (BaseExtractionExporterConfig): Configuration specific to the exporter implementation.
+            config (BaseExtractionExporterConfig | ExtractionPipelineConfig):
+                Configuration specific to the exporter implementation or full pipeline configuration.
         """
-        self.config = config
+        if isinstance(config, ExtractionPipelineConfig):
+            self.pipeline_config = config
+            self.config = config.exporter
+        else:
+            self.pipeline_config = None
+            self.config = config
 
     @abstractmethod
-    async def export(self, document: Document, data: ExtractionSchema) -> None:
+    async def export(
+        self,
+        document: Document,
+        data: ExtractionResult[ExtractionSchema],
+        context: PipelineContext | None = None,
+    ) -> None:
         """Persists extracted data to the configured destination.
 
         This is an asynchronous operation to support non-blocking I/O writes.
 
         Args:
             document (Document): The source document for this extraction.
-            data (ExtractionSchema): The populated Pydantic model containing the extracted information.
+            data (ExtractionResult[ExtractionSchema]): The extracted data with metadata.
+            context (PipelineContext | None): Optional shared pipeline context.
 
         Returns:
             None: The method should raise an exception if the export fails.

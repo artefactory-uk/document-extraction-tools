@@ -8,25 +8,58 @@ and populating a target Pydantic schema with specific data points.
 from abc import ABC, abstractmethod
 
 from document_extraction_tools.config.base_extractor_config import BaseExtractorConfig
+from document_extraction_tools.config.evaluation_pipeline_config import (
+    EvaluationPipelineConfig,
+)
+from document_extraction_tools.config.extraction_pipeline_config import (
+    ExtractionPipelineConfig,
+)
+from document_extraction_tools.types.context import PipelineContext
 from document_extraction_tools.types.document import Document
-from document_extraction_tools.types.schema import ExtractionSchema
+from document_extraction_tools.types.extraction_result import (
+    ExtractionResult,
+    ExtractionSchema,
+)
 
 
 class BaseExtractor(ABC):
-    """Abstract interface for data extraction."""
+    """Abstract interface for data extraction.
 
-    def __init__(self, config: BaseExtractorConfig) -> None:
+    Attributes:
+        config (BaseExtractorConfig): Component-specific configuration.
+        pipeline_config (ExtractionPipelineConfig | EvaluationPipelineConfig | None):
+            Optional pipeline configuration when constructed with a pipeline config.
+    """
+
+    config: BaseExtractorConfig
+    pipeline_config: ExtractionPipelineConfig | EvaluationPipelineConfig | None
+
+    def __init__(
+        self,
+        config: (
+            BaseExtractorConfig | ExtractionPipelineConfig | EvaluationPipelineConfig
+        ),
+    ) -> None:
         """Initialize with a configuration object.
 
         Args:
-            config (BaseExtractorConfig): Configuration specific to the extractor implementation.
+            config (BaseExtractorConfig | ExtractionPipelineConfig | EvaluationPipelineConfig):
+                Configuration specific to the extractor implementation or full pipeline configuration.
         """
-        self.config = config
+        if isinstance(config, (ExtractionPipelineConfig, EvaluationPipelineConfig)):
+            self.pipeline_config = config
+            self.config = config.extractor
+        else:
+            self.pipeline_config = None
+            self.config = config
 
     @abstractmethod
     async def extract(
-        self, document: Document, schema: type[ExtractionSchema]
-    ) -> ExtractionSchema:
+        self,
+        document: Document,
+        schema: type[ExtractionSchema],
+        context: PipelineContext | None = None,
+    ) -> ExtractionResult[ExtractionSchema]:
         """Extracts structured data from a Document to match the provided Schema.
 
         This is an asynchronous operation to support I/O-bound tasks.
@@ -34,8 +67,9 @@ class BaseExtractor(ABC):
         Args:
             document (Document): The fully parsed document.
             schema (type[ExtractionSchema]): The Pydantic model class defining the target structure.
+            context (PipelineContext | None): Optional shared pipeline context.
 
         Returns:
-            ExtractionSchema: An instance of the schema populated with the extracted data.
+            ExtractionResult[ExtractionSchema]: The extracted data with metadata.
         """
         pass

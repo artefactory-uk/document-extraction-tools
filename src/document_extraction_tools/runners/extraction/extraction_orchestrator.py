@@ -24,10 +24,14 @@ from document_extraction_tools.config.extraction_orchestrator_config import (
 from document_extraction_tools.config.extraction_pipeline_config import (
     ExtractionPipelineConfig,
 )
+from document_extraction_tools.types.context import PipelineContext
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.document_bytes import DocumentBytes
+from document_extraction_tools.types.extraction_result import (
+    ExtractionResult,
+    ExtractionSchema,
+)
 from document_extraction_tools.types.path_identifier import PathIdentifier
-from document_extraction_tools.types.schema import ExtractionSchema
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -40,6 +44,14 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
     CPU-bound tasks (Reading/Converting) are offloaded to a thread pool while
     I/O-bound tasks (Extracting/Exporting) run concurrently in the async event
     loop.
+
+    Attributes:
+        config (ExtractionOrchestratorConfig): Orchestrator configuration.
+        reader (BaseReader): Reader component instance.
+        converter (BaseConverter): Converter component instance.
+        extractor (BaseExtractor): Extractor component instance.
+        exporter (BaseExtractionExporter): Exporter component instance.
+        schema (type[ExtractionSchema]): Target extraction schema.
     """
 
     def __init__(
@@ -91,10 +103,10 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
         Returns:
             ExtractionOrchestrator[ExtractionSchema]: The configured orchestrator instance.
         """
-        reader_instance = reader_cls(config.reader)
-        converter_instance = converter_cls(config.converter)
-        extractor_instance = extractor_cls(config.extractor)
-        exporter_instance = exporter_cls(config.exporter)
+        reader_instance = reader_cls(config)
+        converter_instance = converter_cls(config)
+        extractor_instance = extractor_cls(config)
+        exporter_instance = exporter_cls(config)
 
         return cls(
             config=config.orchestrator,
@@ -107,7 +119,10 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
 
     @staticmethod
     def _ingest(
-        path_identifier: PathIdentifier, reader: BaseReader, converter: BaseConverter
+        path_identifier: PathIdentifier,
+        reader: BaseReader,
+        converter: BaseConverter,
+        context: PipelineContext,
     ) -> Document:
         """Performs the CPU-bound ingestion phase.
 
@@ -115,12 +130,13 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
             path_identifier (PathIdentifier): The path identifier to the source file.
             reader (BaseReader): The reader instance to use.
             converter (BaseConverter): The converter instance to use.
+            context (PipelineContext): Shared pipeline context.
 
         Returns:
             Document: The fully parsed document object.
         """
-        doc_bytes: DocumentBytes = reader.read(path_identifier)
-        return converter.convert(doc_bytes)
+        doc_bytes: DocumentBytes = reader.read(path_identifier, context)
+        return converter.convert(doc_bytes, context)
 
     @staticmethod
     async def _run_in_executor_with_context(
@@ -148,6 +164,7 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
         path_identifier: PathIdentifier,
         pool: ThreadPoolExecutor,
         semaphore: asyncio.Semaphore,
+        context: PipelineContext,
     ) -> None:
         """Runs the full processing lifecycle for a single document.
 
@@ -159,33 +176,46 @@ class ExtractionOrchestrator(Generic[ExtractionSchema]):
             path_identifier (PathIdentifier): The input file to process.
             pool (ThreadPoolExecutor): The shared pool for CPU tasks.
             semaphore (asyncio.Semaphore): The shared limiter for I/O tasks.
+            context (PipelineContext): Shared pipeline context.
         """
         loop = asyncio.get_running_loop()
 
         document: Document = await self._run_in_executor_with_context(
-            loop, pool, self._ingest, path_identifier, self.reader, self.converter
+            loop,
+            pool,
+            self._ingest,
+            path_identifier,
+            self.reader,
+            self.converter,
+            context,
         )
 
         async with semaphore:
-            extracted_data: ExtractionSchema = await self.extractor.extract(
-                document, self.schema
+            extracted_data: ExtractionResult[ExtractionSchema] = (
+                await self.extractor.extract(document, self.schema, context)
             )
-            await self.exporter.export(document, extracted_data)
+            await self.exporter.export(document, extracted_data, context)
 
             logger.info("Completed extraction for %s", document.id)
 
-    async def run(self, file_paths_to_process: list[PathIdentifier]) -> None:
+    async def run(
+        self,
+        file_paths_to_process: list[PathIdentifier],
+        context: PipelineContext | None = None,
+    ) -> None:
         """Main entry point. Orchestrates the execution of the provided file list.
 
         Args:
             file_paths_to_process (list[PathIdentifier]): The list of file paths to process.
+            context (PipelineContext | None): Optional shared pipeline context.
         """
+        context = context or PipelineContext()
         semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
 
             tasks = [
-                self.process_document(path_identifier, pool, semaphore)
+                self.process_document(path_identifier, pool, semaphore, context)
                 for path_identifier in file_paths_to_process
             ]
 

@@ -1,4 +1,7 @@
-"""Domain models representing the structured document state."""
+"""Models for representing documents and their content.
+
+These models define the core abstractions for documents, pages, and their content.
+"""
 
 from typing import Any, Literal, TypeAlias
 

@@ -28,8 +28,10 @@ from document_extraction_tools.runners import (
 from document_extraction_tools.types import (
     Document,
     DocumentBytes,
+    ExtractionResult,
     Page,
     PathIdentifier,
+    PipelineContext,
     TextData,
 )
 
@@ -48,7 +50,9 @@ class DummyReader(BaseReader):
         super().__init__(config)
         self.read_calls: list[PathIdentifier] = []
 
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, _context: PipelineContext | None = None
+    ) -> DocumentBytes:
         """Return fixed bytes while tracking read calls."""
         self.read_calls.append(path_identifier)
         return DocumentBytes(
@@ -66,7 +70,9 @@ class DummyConverter(BaseConverter):
         super().__init__(config)
         self.convert_calls: list[DocumentBytes] = []
 
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, _context: PipelineContext | None = None
+    ) -> Document:
         """Return a minimal document while tracking conversion calls."""
         self.convert_calls.append(document_bytes)
         return Document(
@@ -90,13 +96,16 @@ class DummyExtractor(BaseExtractor):
         self.extract_calls: list[Document] = []
 
     async def extract(
-        self, document: Document, schema: type[DummySchema]
-    ) -> DummySchema:
+        self,
+        document: Document,
+        schema: type[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> ExtractionResult[DummySchema]:
         """Return a schema instance or raise for configured ids."""
         self.extract_calls.append(document)
         if self.fail_on is not None and document.id == self.fail_on:
             raise RuntimeError("boom")
-        return schema(value=f"extracted:{document.id}")
+        return ExtractionResult(data=schema(value=f"extracted:{document.id}"))
 
 
 class DummyExporter(BaseExtractionExporter):
@@ -107,7 +116,12 @@ class DummyExporter(BaseExtractionExporter):
         super().__init__(config)
         self.export_calls: list[tuple[Document, DummySchema]] = []
 
-    async def export(self, document: Document, data: DummySchema) -> None:
+    async def export(
+        self,
+        document: Document,
+        data: ExtractionResult[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> None:
         """Record exports without persisting data."""
         self.export_calls.append((document, data))
 
@@ -176,13 +190,15 @@ async def test_process_document_runs_pipeline() -> None:
 
     path = PathIdentifier(path="doc-1")
     with ThreadPoolExecutor(max_workers=1) as pool:
-        await orchestrator.process_document(path, pool, asyncio.Semaphore(1))
+        await orchestrator.process_document(
+            path, pool, asyncio.Semaphore(1), PipelineContext()
+        )
 
     assert reader.read_calls == [path]
     assert len(converter.convert_calls) == 1
     assert len(extractor.extract_calls) == 1
     assert len(exporter.export_calls) == 1
-    assert exporter.export_calls[0][1].value == "extracted:doc-1"
+    assert exporter.export_calls[0][1].data.value == "extracted:doc-1"
 
 
 @pytest.mark.asyncio

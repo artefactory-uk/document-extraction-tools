@@ -14,6 +14,7 @@ class ExtractionOrchestratorConfig(BaseModel):
         default=4,
         description="Number of processes to use for CPU-bound tasks.",
     )
+
     max_concurrency: int = Field(
         default=10,
         description="Maximum number of concurrent I/O requests allowed.",

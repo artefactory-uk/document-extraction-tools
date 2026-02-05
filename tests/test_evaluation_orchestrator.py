@@ -33,8 +33,10 @@ from document_extraction_tools.types import (
     DocumentBytes,
     EvaluationExample,
     EvaluationResult,
+    ExtractionResult,
     Page,
     PathIdentifier,
+    PipelineContext,
     TextData,
 )
 
@@ -53,7 +55,9 @@ class DummyReader(BaseReader):
         super().__init__(config)
         self.read_calls: list[PathIdentifier] = []
 
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, _context: PipelineContext | None = None
+    ) -> DocumentBytes:
         """Return fixed bytes while tracking read calls."""
         self.read_calls.append(path_identifier)
         return DocumentBytes(
@@ -71,7 +75,9 @@ class DummyConverter(BaseConverter):
         super().__init__(config)
         self.convert_calls: list[DocumentBytes] = []
 
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, _context: PipelineContext | None = None
+    ) -> Document:
         """Return a minimal document while tracking conversion calls."""
         self.convert_calls.append(document_bytes)
         return Document(
@@ -93,13 +99,16 @@ class DummyExtractor(BaseExtractor):
         self.extract_calls: list[Document] = []
 
     async def extract(
-        self, document: Document, schema: type[DummySchema]
-    ) -> DummySchema:
+        self,
+        document: Document,
+        schema: type[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> ExtractionResult[DummySchema]:
         """Return a schema instance or raise for configured ids."""
         self.extract_calls.append(document)
         if self.fail_on is not None and document.id == self.fail_on:
             raise RuntimeError("boom")
-        return schema(value=f"pred:{document.id}")
+        return ExtractionResult(data=schema(value=f"pred:{document.id}"))
 
 
 class DummyEvaluatorConfig(BaseEvaluatorConfig):
@@ -116,12 +125,17 @@ class DummyEvaluator(BaseEvaluator[DummySchema]):
         super().__init__(config)
         self.evaluate_calls: list[tuple[DummySchema, DummySchema]] = []
 
-    def evaluate(self, true: DummySchema, pred: DummySchema) -> EvaluationResult:
+    def evaluate(
+        self,
+        true: ExtractionResult[DummySchema],
+        pred: ExtractionResult[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> EvaluationResult:
         """Return a dummy evaluation result while tracking calls."""
-        self.evaluate_calls.append((true, pred))
+        self.evaluate_calls.append((true.data, pred.data))
         return EvaluationResult(
             name="dummy",
-            result=true.value == pred.value,
+            result=true.data.value == pred.data.value,
             description="Equality check",
         )
 
@@ -130,7 +144,9 @@ class DummyTestDataLoader(BaseTestDataLoader[DummySchema]):
     """Test data loader stub for wiring tests."""
 
     def load_test_data(
-        self, _path_identifier: PathIdentifier
+        self,
+        _path_identifier: PathIdentifier,
+        _context: PipelineContext | None = None,
     ) -> list[EvaluationExample[DummySchema]]:
         """Return an empty set of examples for tests."""
         return []
@@ -145,7 +161,9 @@ class DummyEvaluationExporter(BaseEvaluationExporter):
         self.export_calls: list[list[tuple[Document, list[EvaluationResult]]]] = []
 
     async def export(
-        self, results: list[tuple[Document, list[EvaluationResult]]]
+        self,
+        results: list[tuple[Document, list[EvaluationResult]]],
+        _context: PipelineContext | None = None,
     ) -> None:
         """Record evaluation results without persisting data."""
         self.export_calls.append(results)
@@ -243,12 +261,12 @@ async def test_process_example_runs_pipeline() -> None:
     example: EvaluationExample[DummySchema] = EvaluationExample(
         id="example-1",
         path_identifier=PathIdentifier(path="doc-1"),
-        true=DummySchema(value="pred:doc-1"),
+        true=ExtractionResult(data=DummySchema(value="pred:doc-1")),
     )
 
     with ThreadPoolExecutor(max_workers=1) as pool:
         document, results = await orchestrator.process_example(
-            example, pool, asyncio.Semaphore(1)
+            example, pool, asyncio.Semaphore(1), PipelineContext()
         )
 
     assert document.id == "doc-1"
@@ -275,12 +293,12 @@ async def test_run_exports_only_valid_results() -> None:
         EvaluationExample(
             id="example-ok",
             path_identifier=PathIdentifier(path="doc-ok"),
-            true=DummySchema(value="pred:doc-ok"),
+            true=ExtractionResult(data=DummySchema(value="pred:doc-ok")),
         ),
         EvaluationExample(
             id="example-fail",
             path_identifier=PathIdentifier(path="doc-fail"),
-            true=DummySchema(value="pred:doc-fail"),
+            true=ExtractionResult(data=DummySchema(value="pred:doc-fail")),
         ),
     ]
 

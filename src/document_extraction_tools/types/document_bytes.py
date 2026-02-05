@@ -1,7 +1,9 @@
-"""Input models representing raw data ingestion.
+"""Model for document bytes.
 
-These models act as containers for file content before any parsing occurs.
+This model acts as a container for file content before any parsing occurs.
 """
+
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +23,7 @@ class DocumentBytes(BaseModel):
         ..., description="Path identifier for the original source."
     )
 
-    mime_type: str = Field(
-        default="application/pdf",
-        description="The standard MIME type of the file content.",
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional metadata associated with the raw document.",
     )

@@ -10,25 +10,49 @@ from typing import Generic
 from document_extraction_tools.config.base_test_data_loader_config import (
     BaseTestDataLoaderConfig,
 )
+from document_extraction_tools.config.evaluation_pipeline_config import (
+    EvaluationPipelineConfig,
+)
+from document_extraction_tools.types.context import PipelineContext
 from document_extraction_tools.types.evaluation_example import EvaluationExample
+from document_extraction_tools.types.extraction_result import ExtractionSchema
 from document_extraction_tools.types.path_identifier import PathIdentifier
-from document_extraction_tools.types.schema import ExtractionSchema
 
 
 class BaseTestDataLoader(ABC, Generic[ExtractionSchema]):
-    """Abstract interface for loading evaluation test data."""
+    """Abstract interface for loading evaluation test data.
 
-    def __init__(self, config: BaseTestDataLoaderConfig) -> None:
+    Attributes:
+        config (BaseTestDataLoaderConfig): Component-specific configuration.
+        pipeline_config (EvaluationPipelineConfig | None): Optional pipeline configuration
+            when constructed with a pipeline config.
+    """
+
+    config: BaseTestDataLoaderConfig
+    pipeline_config: EvaluationPipelineConfig | None
+
+    def __init__(
+        self,
+        config: BaseTestDataLoaderConfig | EvaluationPipelineConfig,
+    ) -> None:
         """Initialize with a configuration object.
 
         Args:
-            config (BaseTestDataLoaderConfig): Configuration specific to the test data loader implementation.
+            config (BaseTestDataLoaderConfig | EvaluationPipelineConfig):
+                Configuration specific to the test data loader implementation or full pipeline configuration.
         """
-        self.config = config
+        if isinstance(config, EvaluationPipelineConfig):
+            self.pipeline_config = config
+            self.config = config.test_data_loader
+        else:
+            self.pipeline_config = None
+            self.config = config
 
     @abstractmethod
     def load_test_data(
-        self, path_identifier: PathIdentifier
+        self,
+        path_identifier: PathIdentifier,
+        context: PipelineContext | None = None,
     ) -> list[EvaluationExample[ExtractionSchema]]:
         """Load test examples for evaluation.
 
@@ -37,6 +61,7 @@ class BaseTestDataLoader(ABC, Generic[ExtractionSchema]):
 
         Args:
             path_identifier (PathIdentifier): The source location for loading evaluation examples.
+            context (PipelineContext | None): Optional shared pipeline context.
 
         Returns:
             list[EvaluationExample[ExtractionSchema]]: A list of evaluation examples for evaluation.
