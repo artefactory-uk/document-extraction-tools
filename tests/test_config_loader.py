@@ -14,8 +14,8 @@ from document_extraction_tools.config import (
     BaseFileListerConfig,
     BaseReaderConfig,
     BaseTestDataLoaderConfig,
-    load_config,
     load_evaluation_config,
+    load_extraction_config,
 )
 from document_extraction_tools.config.config_loader import (
     _load_evaluator_configs,
@@ -57,7 +57,7 @@ def test_load_yaml_empty_returns_empty_dict(tmp_path: Path) -> None:
     assert _load_yaml(target) == {}
 
 
-def test_load_config_builds_pipeline_config(tmp_path: Path) -> None:
+def test_load_extraction_config_builds_pipeline_config(tmp_path: Path) -> None:
     """Build an extraction pipeline config from per-component YAML files."""
     config_dir = tmp_path / "config"
     config_dir.mkdir()
@@ -72,31 +72,33 @@ def test_load_config_builds_pipeline_config(tmp_path: Path) -> None:
     _write_yaml(config_dir / BaseExtractorConfig.filename, {})
     _write_yaml(config_dir / BaseExtractionExporterConfig.filename, {})
 
-    config = load_config(
+    config = load_extraction_config(
         lister_config_cls=BaseFileListerConfig,
         reader_config_cls=BaseReaderConfig,
         converter_config_cls=BaseConverterConfig,
         extractor_config_cls=BaseExtractorConfig,
-        exporter_config_cls=BaseExtractionExporterConfig,
+        extraction_exporter_config_cls=BaseExtractionExporterConfig,
+        extraction_orchestrator_config_cls=ExtractionOrchestratorConfig,
         config_dir=config_dir,
     )
 
     assert isinstance(config, ExtractionPipelineConfig)
-    assert config.orchestrator.max_workers == 2
-    assert config.orchestrator.max_concurrency == 3
+    assert config.extraction_orchestrator.max_workers == 2
+    assert config.extraction_orchestrator.max_concurrency == 3
     assert isinstance(config.file_lister, BaseFileListerConfig)
 
 
-def test_load_config_missing_dir_raises(tmp_path: Path) -> None:
+def test_load_extraction_config_missing_dir_raises(tmp_path: Path) -> None:
     """Raise when the config directory is missing."""
     missing_dir = tmp_path / "missing"
     with pytest.raises(FileNotFoundError):
-        load_config(
+        load_extraction_config(
             lister_config_cls=BaseFileListerConfig,
             reader_config_cls=BaseReaderConfig,
             converter_config_cls=BaseConverterConfig,
             extractor_config_cls=BaseExtractorConfig,
-            exporter_config_cls=BaseExtractionExporterConfig,
+            extraction_exporter_config_cls=BaseExtractionExporterConfig,
+            extraction_orchestrator_config_cls=ExtractionOrchestratorConfig,
             config_dir=missing_dir,
         )
 
@@ -127,12 +129,13 @@ def test_load_evaluation_config_builds_pipeline_config(tmp_path: Path) -> None:
         converter_config_cls=BaseConverterConfig,
         extractor_config_cls=BaseExtractorConfig,
         evaluation_exporter_config_cls=BaseEvaluationExporterConfig,
+        evaluation_orchestrator_config_cls=EvaluationOrchestratorConfig,
         config_dir=config_dir,
     )
 
     assert isinstance(config, EvaluationPipelineConfig)
-    assert config.orchestrator.max_workers == 5
-    assert config.orchestrator.max_concurrency == 6
+    assert config.evaluation_orchestrator.max_workers == 5
+    assert config.evaluation_orchestrator.max_concurrency == 6
     assert len(config.evaluators) == 1
     assert isinstance(config.evaluators[0], DummyEvaluatorConfig)
 

@@ -11,6 +11,7 @@ from document_extraction_tools.base import (
     BaseConverter,
     BaseExtractionExporter,
     BaseExtractor,
+    BaseFileLister,
     BaseReader,
 )
 from document_extraction_tools.config import (
@@ -129,27 +130,31 @@ class DummyExporter(BaseExtractionExporter):
 def test_from_config_wires_components() -> None:
     """Instantiate and wire pipeline components from config."""
     config = ExtractionPipelineConfig(
-        orchestrator=ExtractionOrchestratorConfig(max_workers=1, max_concurrency=2),
+        extraction_orchestrator=ExtractionOrchestratorConfig(
+            max_workers=1, max_concurrency=2
+        ),
         file_lister=BaseFileListerConfig(),
         reader=BaseReaderConfig(),
         converter=BaseConverterConfig(),
         extractor=BaseExtractorConfig(),
-        exporter=BaseExtractionExporterConfig(),
+        extraction_exporter=BaseExtractionExporterConfig(),
     )
 
     orchestrator = ExtractionOrchestrator.from_config(
         config=config,
         schema=DummySchema,
+        file_lister_cls=DummyFileLister,
         reader_cls=DummyReader,
         converter_cls=DummyConverter,
         extractor_cls=DummyExtractor,
-        exporter_cls=DummyExporter,
+        extraction_exporter_cls=DummyExporter,
     )
 
+    assert isinstance(orchestrator.file_lister, DummyFileLister)
     assert isinstance(orchestrator.reader, DummyReader)
     assert isinstance(orchestrator.converter, DummyConverter)
     assert isinstance(orchestrator.extractor, DummyExtractor)
-    assert isinstance(orchestrator.exporter, DummyExporter)
+    assert isinstance(orchestrator.extraction_exporter, DummyExporter)
     assert orchestrator.config.max_workers == 1
     assert orchestrator.schema is DummySchema
 
@@ -181,10 +186,11 @@ async def test_process_document_runs_pipeline() -> None:
     exporter = DummyExporter(BaseExtractionExporterConfig())
     orchestrator = ExtractionOrchestrator(
         config=ExtractionOrchestratorConfig(max_workers=1, max_concurrency=1),
+        file_lister=DummyFileLister(BaseFileListerConfig()),
         reader=reader,
         converter=converter,
         extractor=extractor,
-        exporter=exporter,
+        extraction_exporter=exporter,
         schema=DummySchema,
     )
 
@@ -210,10 +216,11 @@ async def test_run_skips_failed_documents() -> None:
     exporter = DummyExporter(BaseExtractionExporterConfig())
     orchestrator = ExtractionOrchestrator(
         config=ExtractionOrchestratorConfig(max_workers=2, max_concurrency=2),
+        file_lister=DummyFileLister(BaseFileListerConfig()),
         reader=reader,
         converter=converter,
         extractor=extractor,
-        exporter=exporter,
+        extraction_exporter=exporter,
         schema=DummySchema,
     )
 
@@ -223,3 +230,17 @@ async def test_run_skips_failed_documents() -> None:
 
     exported_ids = {doc.id for doc, _ in exporter.export_calls}
     assert exported_ids == {"doc-ok"}
+
+
+class DummyFileLister(BaseFileLister):
+    """File lister stub used for wiring tests."""
+
+    def __init__(self, config: BaseFileListerConfig) -> None:
+        """Initialize the file lister stub."""
+        super().__init__(config)
+
+    def list_files(
+        self, _context: PipelineContext | None = None
+    ) -> list[PathIdentifier]:
+        """Return an empty list for tests."""
+        return []

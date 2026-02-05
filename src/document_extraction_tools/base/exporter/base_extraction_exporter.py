@@ -45,7 +45,7 @@ class BaseExtractionExporter(ABC):
         """
         if isinstance(config, ExtractionPipelineConfig):
             self.pipeline_config = config
-            self.config = config.exporter
+            self.config = config.extraction_exporter
         else:
             self.pipeline_config = None
             self.config = config

@@ -23,7 +23,7 @@ class EvaluationPipelineConfig(BaseModel):
     This class aggregates the configurations for all evaluation pipeline components.
     """
 
-    orchestrator: EvaluationOrchestratorConfig = Field(
+    evaluation_orchestrator: EvaluationOrchestratorConfig = Field(
         ..., description="Configuration for orchestrating evaluation execution."
     )
 

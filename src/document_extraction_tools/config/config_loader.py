@@ -55,26 +55,28 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f) or {}
 
 
-def load_config(
+def load_extraction_config(
     lister_config_cls: type[BaseFileListerConfig],
     reader_config_cls: type[BaseReaderConfig],
     converter_config_cls: type[BaseConverterConfig],
     extractor_config_cls: type[BaseExtractorConfig],
-    exporter_config_cls: type[BaseExtractionExporterConfig],
-    orchestrator_config_cls: type[
+    extraction_exporter_config_cls: type[BaseExtractionExporterConfig],
+    extraction_orchestrator_config_cls: type[
         ExtractionOrchestratorConfig
     ] = ExtractionOrchestratorConfig,
     config_dir: Path = Path("config/yaml"),
 ) -> ExtractionPipelineConfig:
-    """Loads configuration based on a mapping file.
+    """Loads extraction configuration based on component filenames.
 
     Args:
         lister_config_cls (type[BaseFileListerConfig]): The FileListerConfig subclass to use.
         reader_config_cls (type[BaseReaderConfig]): The ReaderConfig subclass to use.
         converter_config_cls (type[BaseConverterConfig]): The ConverterConfig subclass to use.
         extractor_config_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
-        exporter_config_cls (type[BaseExtractionExporterConfig]): The ExporterConfig subclass to use.
-        orchestrator_config_cls (type[ExtractionOrchestratorConfig]): The ExtractionOrchestratorConfig class to use.
+        extraction_exporter_config_cls (type[BaseExtractionExporterConfig]): The
+            ExtractionExporterConfig subclass to use.
+        extraction_orchestrator_config_cls (type[ExtractionOrchestratorConfig]): The
+            ExtractionOrchestratorConfig class to use.
         config_dir (Path): Directory containing the configs.
 
     Returns:
@@ -87,8 +89,8 @@ def load_config(
         raise FileNotFoundError(f"Config directory not found: {config_dir.absolute()}")
 
     return ExtractionPipelineConfig(
-        orchestrator=orchestrator_config_cls(
-            **_load_yaml(config_dir / orchestrator_config_cls.filename)
+        extraction_orchestrator=extraction_orchestrator_config_cls(
+            **_load_yaml(config_dir / extraction_orchestrator_config_cls.filename)
         ),
         file_lister=lister_config_cls(
             **_load_yaml(config_dir / lister_config_cls.filename)
@@ -100,8 +102,8 @@ def load_config(
         extractor=extractor_config_cls(
             **_load_yaml(config_dir / extractor_config_cls.filename)
         ),
-        exporter=exporter_config_cls(
-            **_load_yaml(config_dir / exporter_config_cls.filename)
+        extraction_exporter=extraction_exporter_config_cls(
+            **_load_yaml(config_dir / extraction_exporter_config_cls.filename)
         ),
     )
 
@@ -113,12 +115,12 @@ def load_evaluation_config(
     converter_config_cls: type[BaseConverterConfig],
     extractor_config_cls: type[BaseExtractorConfig],
     evaluation_exporter_config_cls: type[BaseEvaluationExporterConfig],
-    orchestrator_config_cls: type[
+    evaluation_orchestrator_config_cls: type[
         EvaluationOrchestratorConfig
     ] = EvaluationOrchestratorConfig,
     config_dir: Path = Path("config/yaml"),
 ) -> EvaluationPipelineConfig:
-    """Loads evaluation configuration based on default filenames.
+    """Loads evaluation configuration based on component filenames.
 
     Args:
         test_data_loader_config_cls (type[BaseTestDataLoaderConfig]): The TestDataLoaderConfig subclass to use.
@@ -129,7 +131,8 @@ def load_evaluation_config(
         extractor_config_cls (type[BaseExtractorConfig]): The ExtractorConfig subclass to use.
         evaluation_exporter_config_cls (type[BaseEvaluationExporterConfig]): The EvaluationExporterConfig
             subclass to use.
-        orchestrator_config_cls (type[EvaluationOrchestratorConfig]): The EvaluationOrchestratorConfig class to use.
+        evaluation_orchestrator_config_cls (type[EvaluationOrchestratorConfig]): The
+            EvaluationOrchestratorConfig class to use.
         config_dir (Path): Directory containing the configs.
 
     Returns:
@@ -142,8 +145,8 @@ def load_evaluation_config(
         raise FileNotFoundError(f"Config directory not found: {config_dir.absolute()}")
 
     return EvaluationPipelineConfig(
-        orchestrator=orchestrator_config_cls(
-            **_load_yaml(config_dir / orchestrator_config_cls.filename)
+        evaluation_orchestrator=evaluation_orchestrator_config_cls(
+            **_load_yaml(config_dir / evaluation_orchestrator_config_cls.filename)
         ),
         test_data_loader=test_data_loader_config_cls(
             **_load_yaml(config_dir / test_data_loader_config_cls.filename)

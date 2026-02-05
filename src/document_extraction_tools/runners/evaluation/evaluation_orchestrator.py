@@ -54,7 +54,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         converter (BaseConverter): Converter component instance.
         extractor (BaseExtractor): Extractor component instance.
         evaluators (list[BaseEvaluator[ExtractionSchema]]): Evaluator instances.
-        exporter (BaseEvaluationExporter): Evaluation exporter instance.
+        evaluation_exporter (BaseEvaluationExporter): Evaluation exporter instance.
         schema (type[ExtractionSchema]): Target extraction schema.
     """
 
@@ -66,7 +66,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         converter: BaseConverter,
         extractor: BaseExtractor,
         evaluators: Iterable[BaseEvaluator[ExtractionSchema]],
-        exporter: BaseEvaluationExporter,
+        evaluation_exporter: BaseEvaluationExporter,
         schema: type[ExtractionSchema],
     ) -> None:
         """Initialize the evaluation orchestrator with pipeline components.
@@ -78,7 +78,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             converter (BaseConverter): Component to transform bytes into Document objects.
             extractor (BaseExtractor): Component to generate predictions.
             evaluators (Iterable[BaseEvaluator[ExtractionSchema]]): Metrics to apply to each example.
-            exporter (BaseEvaluationExporter): Component to persist evaluation results.
+            evaluation_exporter (BaseEvaluationExporter): Component to persist evaluation results.
             schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
         """
         self.config = config
@@ -87,7 +87,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         self.converter = converter
         self.extractor = extractor
         self.evaluators = list(evaluators)
-        self.exporter = exporter
+        self.evaluation_exporter = evaluation_exporter
         self.schema = schema
 
     @classmethod
@@ -131,13 +131,13 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             raise ValueError("No evaluators provided.")
 
         return cls(
-            config=config.orchestrator,
+            config=config.evaluation_orchestrator,
             test_data_loader=test_data_loader_instance,
             reader=reader_instance,
             converter=converter_instance,
             extractor=extractor_instance,
             evaluators=evaluators,
-            exporter=evaluation_exporter_instance,
+            evaluation_exporter=evaluation_exporter_instance,
             schema=schema,
         )
 
@@ -266,4 +266,4 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
                     valid_results.append(result)
 
             if valid_results:
-                await self.exporter.export(valid_results, context)
+                await self.evaluation_exporter.export(valid_results, context)

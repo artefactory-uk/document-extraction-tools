@@ -172,7 +172,9 @@ class DummyEvaluationExporter(BaseEvaluationExporter):
 def test_from_config_wires_components_and_evaluators() -> None:
     """Instantiate and wire evaluation components from config."""
     config = EvaluationPipelineConfig(
-        orchestrator=EvaluationOrchestratorConfig(max_workers=1, max_concurrency=2),
+        evaluation_orchestrator=EvaluationOrchestratorConfig(
+            max_workers=1, max_concurrency=2
+        ),
         test_data_loader=BaseTestDataLoaderConfig(),
         evaluators=[DummyEvaluatorConfig()],
         reader=BaseReaderConfig(),
@@ -196,7 +198,7 @@ def test_from_config_wires_components_and_evaluators() -> None:
     assert isinstance(orchestrator.converter, DummyConverter)
     assert isinstance(orchestrator.extractor, DummyExtractor)
     assert isinstance(orchestrator.test_data_loader, DummyTestDataLoader)
-    assert isinstance(orchestrator.exporter, DummyEvaluationExporter)
+    assert isinstance(orchestrator.evaluation_exporter, DummyEvaluationExporter)
     assert len(orchestrator.evaluators) == 1
     assert isinstance(orchestrator.evaluators[0], DummyEvaluator)
 
@@ -222,7 +224,9 @@ async def test_run_in_executor_with_context_preserves_contextvars() -> None:
 def test_from_config_missing_evaluator_config_raises() -> None:
     """Raise when evaluator config is missing for an evaluator class."""
     config = EvaluationPipelineConfig(
-        orchestrator=EvaluationOrchestratorConfig(max_workers=1, max_concurrency=2),
+        evaluation_orchestrator=EvaluationOrchestratorConfig(
+            max_workers=1, max_concurrency=2
+        ),
         test_data_loader=BaseTestDataLoaderConfig(),
         evaluators=[],
         reader=BaseReaderConfig(),
@@ -254,7 +258,7 @@ async def test_process_example_runs_pipeline() -> None:
         converter=DummyConverter(BaseConverterConfig()),
         extractor=DummyExtractor(BaseExtractorConfig()),
         evaluators=[DummyEvaluator(DummyEvaluatorConfig())],
-        exporter=DummyEvaluationExporter(BaseEvaluationExporterConfig()),
+        evaluation_exporter=DummyEvaluationExporter(BaseEvaluationExporterConfig()),
         schema=DummySchema,
     )
 
@@ -285,7 +289,7 @@ async def test_run_exports_only_valid_results() -> None:
         converter=DummyConverter(BaseConverterConfig()),
         extractor=DummyExtractor(BaseExtractorConfig(), fail_on="doc-fail"),
         evaluators=[DummyEvaluator(DummyEvaluatorConfig())],
-        exporter=exporter,
+        evaluation_exporter=exporter,
         schema=DummySchema,
     )
 

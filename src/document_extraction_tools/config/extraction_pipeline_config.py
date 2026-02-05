@@ -22,7 +22,7 @@ class ExtractionPipelineConfig(BaseModel):
     This class aggregates the configurations for all pipeline components.
     """
 
-    orchestrator: ExtractionOrchestratorConfig = Field(
+    extraction_orchestrator: ExtractionOrchestratorConfig = Field(
         ..., description="Configuration for orchestrating extraction execution."
     )
 
@@ -42,6 +42,6 @@ class ExtractionPipelineConfig(BaseModel):
         ..., description="Configuration for extracting structured data."
     )
 
-    exporter: BaseExtractionExporterConfig = Field(
+    extraction_exporter: BaseExtractionExporterConfig = Field(
         ..., description="Configuration for exporting extracted data."
     )
