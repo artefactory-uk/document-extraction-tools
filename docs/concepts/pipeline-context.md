@@ -25,7 +25,6 @@ context = PipelineContext()
 context = PipelineContext(
     context={
         "run_id": "extraction-2024-01-15-001",
-        "environment": "production",
         "batch_size": 100,
     }
 )
@@ -43,7 +42,6 @@ from document_extraction_tools.types import PipelineContext
 context = PipelineContext(
     context={
         "run_id": "daily-extraction-001",
-        "source": "email_attachments",
     }
 )
 
@@ -121,7 +119,7 @@ class MyExporter(BaseExtractionExporter):
     async def export(
         self,
         document: Document,
-        extraction_result: ExtractionResult,
+        data: ExtractionResult,
         context: PipelineContext | None = None,
     ) -> None:
         # Include context metadata in exports
@@ -130,8 +128,8 @@ class MyExporter(BaseExtractionExporter):
         output = {
             "run_id": run_id,
             "document_id": document.id,
-            "data": extraction_result.data.model_dump(),
-            "metadata": extraction_result.metadata,
+            "data": data.data.model_dump(),
+            "metadata": data.metadata,
         }
 
         await self._save_to_database(output)
@@ -149,50 +147,22 @@ context = PipelineContext(
     context={
         "run_id": str(uuid.uuid4()),
         "started_at": datetime.now().isoformat(),
-        "triggered_by": "scheduled_job",
     }
 )
 ```
 
-### 2. Environment Configuration
-
-```python
-import os
-
-context = PipelineContext(
-    context={
-        "environment": os.getenv("ENVIRONMENT", "development"),
-        "api_endpoint": os.getenv("API_ENDPOINT"),
-        "verbose_logging": os.getenv("VERBOSE", "false").lower() == "true",
-    }
-)
-```
-
-### 3. Batch Processing Metadata
+### 2. Batch Processing Metadata
 
 ```python
 context = PipelineContext(
     context={
         "batch_id": "batch-2024-01-15",
         "total_documents": len(file_paths),
-        "source_bucket": "gs://my-bucket/incoming",
     }
 )
 ```
 
-### 4. Feature Flags
-
-```python
-context = PipelineContext(
-    context={
-        "use_new_extractor": True,
-        "enable_caching": False,
-        "max_retries": 3,
-    }
-)
-```
-
-### 5. Correlation IDs for Distributed Tracing
+### 3. Correlation IDs for Distributed Tracing
 
 ```python
 context = PipelineContext(
@@ -263,8 +233,8 @@ if counter:
 |-----------------|----------------|
 | Runtime values (run IDs, timestamps) | Static settings (model names, paths) |
 | Cross-cutting concerns (logging, tracing) | Component-specific parameters |
-| Environment-specific overrides | Default behavior configuration |
-| Values that change per-run | Values that change per-deployment |
+| Values that change per-run | Environment variables, feature flags |
+| Correlation IDs, batch metadata | Values that change per-deployment |
 
 ## API Reference
 

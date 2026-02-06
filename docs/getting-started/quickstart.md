@@ -97,11 +97,11 @@ class MyExtractionExporter(BaseExtractionExporter):
     async def export(
         self,
         document: Document,
-        extraction_result: ExtractionResult[LeaseSchema],
+        data: ExtractionResult[LeaseSchema],
         context: PipelineContext | None = None,
     ) -> None:
         # Save to database, file, etc.
-        print(f"Exported lease for: {extraction_result.data.tenant_name}")
+        print(f"Exported lease for: {data.data.tenant_name}")
 ```
 
 ## Step 3: Create Configuration
@@ -137,6 +137,7 @@ max_concurrency: 10
 
 ```python
 import asyncio
+import uuid
 from pathlib import Path
 from document_extraction_tools.config import load_extraction_config
 from document_extraction_tools.runners import ExtractionOrchestrator
@@ -168,7 +169,7 @@ file_lister = MyFileLister(config.file_lister)
 file_paths = file_lister.list_files()
 
 # Run with optional shared context
-context = PipelineContext(context={"run_id": "quickstart-001"})
+context = PipelineContext(context={"run_id": str(uuid.uuid4())[:8]})
 asyncio.run(orchestrator.run(file_paths, context=context))
 ```
 

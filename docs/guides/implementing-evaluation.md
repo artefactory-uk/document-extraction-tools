@@ -154,10 +154,6 @@ class NumericToleranceEvaluatorConfig(BaseEvaluatorConfig):
 class NumericToleranceEvaluator(BaseEvaluator[LeaseSchema]):
     """Checks if numeric fields (rent, deposit) are within tolerance."""
 
-    def __init__(self, config: NumericToleranceEvaluatorConfig) -> None:
-        super().__init__(config)
-        self.config = config
-
     def evaluate(
         self,
         true: ExtractionResult[LeaseSchema],
@@ -192,10 +188,6 @@ class StringSimilarityEvaluatorConfig(BaseEvaluatorConfig):
 
 class StringSimilarityEvaluator(BaseEvaluator[LeaseSchema]):
     """Measures string similarity for a specific field."""
-
-    def __init__(self, config: StringSimilarityEvaluatorConfig) -> None:
-        super().__init__(config)
-        self.config = config
 
     def evaluate(
         self,
@@ -234,10 +226,6 @@ class CSVEvaluationExporterConfig(BaseEvaluationExporterConfig):
 
 
 class CSVEvaluationExporter(BaseEvaluationExporter):
-    def __init__(self, config: CSVEvaluationExporterConfig) -> None:
-        super().__init__(config)
-        self.config = config
-
     async def export(
         self,
         results: list[tuple[Document, list[EvaluationResult]]],
@@ -306,6 +294,7 @@ max_concurrency: 10
 
 ```python
 import asyncio
+import uuid
 from pathlib import Path
 from document_extraction_tools.config import load_evaluation_config
 from document_extraction_tools.runners import EvaluationOrchestrator
@@ -352,7 +341,7 @@ async def main():
     print(f"Evaluating {len(examples)} lease documents...")
 
     # Run evaluation with optional shared context
-    context = PipelineContext(context={"run_id": "eval-001"})
+    context = PipelineContext(context={"run_id": str(uuid.uuid4())[:8]})
     await orchestrator.run(examples, context=context)
 
     print(f"\nResults saved to {config.evaluation_exporter.output_path}")

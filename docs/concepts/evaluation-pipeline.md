@@ -80,7 +80,7 @@ Loads evaluation examples (ground truth + file paths). Called **before** the orc
 
 ```python
 from document_extraction_tools.base import BaseTestDataLoader
-from document_extraction_tools.types import EvaluationExample, PathIdentifier
+from document_extraction_tools.types import EvaluationExample, ExtractionResult, PathIdentifier
 
 class MyTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
     def load_test_data(
@@ -92,7 +92,7 @@ class MyTestDataLoader(BaseTestDataLoader[InvoiceSchema]):
             examples.append(EvaluationExample(
                 id=row["file_path"],
                 path_identifier=PathIdentifier(path=row["file_path"]),
-                true=InvoiceSchema(**row["true"]),
+                true=ExtractionResult(data=InvoiceSchema(**row["true"])),
             ))
         return examples
 ```
@@ -103,17 +103,20 @@ Computes metrics by comparing ground truth vs predictions. Runs in the **thread 
 
 ```python
 from document_extraction_tools.base import BaseEvaluator
-from document_extraction_tools.types import EvaluationResult
+from document_extraction_tools.types import EvaluationResult, ExtractionResult, PipelineContext
 
 class FieldAccuracyEvaluator(BaseEvaluator[InvoiceSchema]):
     def evaluate(
-        self, true: InvoiceSchema, pred: InvoiceSchema
+        self,
+        true: ExtractionResult[InvoiceSchema],
+        pred: ExtractionResult[InvoiceSchema],
+        context: PipelineContext | None = None,
     ) -> EvaluationResult:
         # Compare fields
-        total_fields = len(true.model_fields)
+        total_fields = len(true.data.model_fields)
         correct = sum(
-            1 for field in true.model_fields
-            if getattr(true, field) == getattr(pred, field)
+            1 for field in true.data.model_fields
+            if getattr(true.data, field) == getattr(pred.data, field)
         )
 
         return EvaluationResult(
@@ -216,6 +219,7 @@ flowchart TB
 ## Running Evaluation
 
 ```python
+import uuid
 from document_extraction_tools.config import load_evaluation_config
 from document_extraction_tools.runners import EvaluationOrchestrator
 from document_extraction_tools.types import PipelineContext
@@ -237,6 +241,6 @@ examples = MyTestDataLoader(config.test_data_loader).load_test_data(
 )
 
 # Run evaluation with optional context
-context = PipelineContext(context={"run_id": "eval-001"})
+context = PipelineContext(context={"run_id": str(uuid.uuid4())[:8]})
 await orchestrator.run(examples, context=context)
 ```

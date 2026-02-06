@@ -89,8 +89,8 @@ class MyReader(BaseReader):
         with open(path_identifier.path, "rb") as f:
             return DocumentBytes(
                 file_bytes=f.read(),
-                mime_type="application/pdf",
                 path_identifier=path_identifier,
+                metadata={"mime_type": "application/pdf"},
             )
 ```
 
@@ -135,7 +135,7 @@ class MyExtractor(BaseExtractor):
         )
         return ExtractionResult(
             data=schema.model_validate(response),
-            metadata={"model": "gpt-4", "tokens_used": response.usage},
+            metadata={"tokens_used": response.usage, "latency_ms": response.latency},
         )
 ```
 
@@ -151,14 +151,14 @@ class MyExtractionExporter(BaseExtractionExporter):
     async def export(
         self,
         document: Document,
-        extraction_result: ExtractionResult[T],
+        data: ExtractionResult[T],
         context: PipelineContext | None = None,
     ) -> None:
         # Save to database, cloud storage, API, etc.
         await self.db.insert(
             path=document.path_identifier.path,
-            data=extraction_result.data.model_dump(),
-            metadata=extraction_result.metadata,
+            data=data.data.model_dump(),
+            metadata=data.metadata,
         )
 ```
 
@@ -167,6 +167,7 @@ class MyExtractionExporter(BaseExtractionExporter):
 The orchestrator coordinates all components:
 
 ```python
+import uuid
 from document_extraction_tools.runners import ExtractionOrchestrator
 from document_extraction_tools.types import PipelineContext
 
@@ -181,7 +182,7 @@ orchestrator = ExtractionOrchestrator.from_config(
 )
 
 # Run the pipeline with optional context
-context = PipelineContext(context={"run_id": "extraction-001"})
+context = PipelineContext(context={"run_id": str(uuid.uuid4())[:8]})
 await orchestrator.run(file_paths, context=context)
 ```
 

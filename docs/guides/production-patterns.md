@@ -124,7 +124,7 @@ class PipelineState:
 
     run_id: str
     documents: dict[str, DocumentState] = field(default_factory=dict)
-    started_at: datetime = field(default_factory=datetime.now)
+    started_at: datetime = field(default_factory=lambda: datetime.now())
     completed_at: datetime | None = None
 
 

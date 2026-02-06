@@ -70,6 +70,7 @@ with open("lease.pdf", "rb") as f:
     doc_bytes = DocumentBytes(
         file_bytes=f.read(),
         path_identifier=PathIdentifier(path="lease.pdf"),
+        metadata={"mime_type": "application/pdf"},
     )
 ```
 
@@ -257,12 +258,11 @@ A shared context object that can be passed through pipeline components to mainta
 ```python
 from document_extraction_tools.types import PipelineContext
 
-# Create context with shared values
+# Create context with runtime values
 context = PipelineContext(
     context={
         "run_id": "extraction-2024-01-15",
-        "environment": "production",
-        "custom_settings": {"verbose": True},
+        "started_at": "2024-01-15T10:30:00",
     }
 )
 

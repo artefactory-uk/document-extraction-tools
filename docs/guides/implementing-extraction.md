@@ -84,10 +84,6 @@ class LocalFileListerConfig(BaseFileListerConfig):
 
 
 class LocalFileLister(BaseFileLister):
-    def __init__(self, config: LocalFileListerConfig) -> None:
-        super().__init__(config)
-        self.config = config
-
     def list_files(
         self, context: PipelineContext | None = None
     ) -> list[PathIdentifier]:
@@ -139,10 +135,6 @@ class PDFConverterConfig(BaseConverterConfig):
 
 
 class PDFConverter(BaseConverter):
-    def __init__(self, config: PDFConverterConfig) -> None:
-        super().__init__(config)
-        self.config = config
-
     def convert(
         self, document_bytes: DocumentBytes, context: PipelineContext | None = None
     ) -> Document:
@@ -181,7 +173,6 @@ class GeminiExtractorConfig(BaseExtractorConfig):
 class GeminiImageExtractor(BaseExtractor):
     def __init__(self, config: GeminiExtractorConfig) -> None:
         super().__init__(config)
-        self.config = config
         self.model = genai.GenerativeModel(config.model_name)
 
     async def extract(
@@ -242,14 +233,10 @@ class JSONExporterConfig(BaseExtractionExporterConfig):
 
 
 class JSONExporter(BaseExtractionExporter):
-    def __init__(self, config: JSONExporterConfig) -> None:
-        super().__init__(config)
-        self.config = config
-
     async def export(
         self,
         document: Document,
-        extraction_result: ExtractionResult[LeaseSchema],
+        data: ExtractionResult[LeaseSchema],
         context: PipelineContext | None = None,
     ) -> None:
         output_dir = Path(self.config.output_directory)
@@ -261,8 +248,8 @@ class JSONExporter(BaseExtractionExporter):
 
         # Export both data and metadata
         output = {
-            "data": extraction_result.data.model_dump(),
-            "metadata": extraction_result.metadata,
+            "data": data.data.model_dump(),
+            "metadata": data.metadata,
         }
 
         with open(output_path, "w") as f:
