@@ -15,8 +15,6 @@ path = PathIdentifier(
     path="/data/invoices/invoice_001.pdf",
     metadata={"source": "email", "received_date": "2024-01-15"}
 )
-# Note: The `metadata` field was previously named `context`. It was renamed
-# to avoid confusion with the `PipelineContext` concept.
 ```
 
 ### DocumentBytes
