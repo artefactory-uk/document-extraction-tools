@@ -91,6 +91,7 @@ nav:
   - Concepts:
       - Overview: concepts/overview.md
       - Data Models: concepts/data-models.md
+      - Pipeline Context: concepts/pipeline-context.md
       - Extraction Pipeline: concepts/extraction-pipeline.md
       - Evaluation Pipeline: concepts/evaluation-pipeline.md
       - Configuration: concepts/configuration.md

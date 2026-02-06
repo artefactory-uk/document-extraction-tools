@@ -23,7 +23,7 @@ flowchart LR
     FL -->|"list[PathIdentifier]"| R
     R -->|DocumentBytes| C
     C -->|Document| E
-    E -->|ExtractionSchema| EX
+    E -->|ExtractionResult| EX
     EX -->|Persisted| Output[(Storage)]
 ```
 
@@ -40,18 +40,20 @@ sequenceDiagram
     participant E as Extractor
     participant EX as Exporter
 
+    Note over O: PipelineContext passed to all components
+
     O->>TP: Submit ingest task
-    TP->>R: read(path_identifier)
+    TP->>R: read(path_identifier, context)
     R-->>TP: DocumentBytes
-    TP->>C: convert(document_bytes)
+    TP->>C: convert(document_bytes, context)
     C-->>TP: Document
     TP-->>O: Document
 
-    O->>E: extract(document, schema)
+    O->>E: extract(document, schema, context)
     Note over E: Async I/O (e.g., LLM API call)
-    E-->>O: ExtractionSchema
+    E-->>O: ExtractionResult
 
-    O->>EX: export(document, data)
+    O->>EX: export(document, data, context)
     Note over EX: Async I/O (e.g., DB write)
     EX-->>O: Done
 ```
@@ -78,10 +80,12 @@ Reads raw bytes from the source and returns `DocumentBytes`. Runs in the **threa
 
 ```python
 from document_extraction_tools.base import BaseReader
-from document_extraction_tools.types import DocumentBytes, PathIdentifier
+from document_extraction_tools.types import DocumentBytes, PathIdentifier, PipelineContext
 
 class MyReader(BaseReader):
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, context: PipelineContext | None = None
+    ) -> DocumentBytes:
         with open(path_identifier.path, "rb") as f:
             return DocumentBytes(
                 file_bytes=f.read(),
@@ -96,10 +100,12 @@ Converts raw bytes into a structured `Document` with pages and content. Runs in 
 
 ```python
 from document_extraction_tools.base import BaseConverter
-from document_extraction_tools.types import Document, DocumentBytes
+from document_extraction_tools.types import Document, DocumentBytes, PipelineContext
 
 class MyConverter(BaseConverter):
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, context: PipelineContext | None = None
+    ) -> Document:
         # Use PDF library, OCR engine, etc.
         pages = parse_pdf(document_bytes.file_bytes)
         return Document(
@@ -112,36 +118,47 @@ class MyConverter(BaseConverter):
 
 ### 4. Extractor
 
-Asynchronously extracts structured data into your Pydantic schema. Runs in the **async event loop**.
+Asynchronously extracts structured data into your Pydantic schema, returning an `ExtractionResult` that wraps the data with optional metadata. Runs in the **async event loop**.
 
 ```python
 from document_extraction_tools.base import BaseExtractor
-from document_extraction_tools.types import Document
+from document_extraction_tools.types import Document, ExtractionResult, PipelineContext
 
 class MyExtractor(BaseExtractor):
-    async def extract(self, document: Document, schema: type[T]) -> T:
+    async def extract(
+        self, document: Document, schema: type[T], context: PipelineContext | None = None
+    ) -> ExtractionResult[T]:
         # Call LLM API, run rules engine, etc.
         response = await self.llm_client.extract(
             document=document,
             schema=schema,
         )
-        return schema.model_validate(response)
+        return ExtractionResult(
+            data=schema.model_validate(response),
+            metadata={"model": "gpt-4", "tokens_used": response.usage},
+        )
 ```
 
 ### 5. ExtractionExporter
 
-Asynchronously persists extracted data to your destination. Runs in the **async event loop**.
+Asynchronously persists extracted data to your destination. Receives the `ExtractionResult` containing both the extracted data and metadata. Runs in the **async event loop**.
 
 ```python
 from document_extraction_tools.base import BaseExtractionExporter
-from document_extraction_tools.types import Document
+from document_extraction_tools.types import Document, ExtractionResult, PipelineContext
 
 class MyExtractionExporter(BaseExtractionExporter):
-    async def export(self, document: Document, data: T) -> None:
+    async def export(
+        self,
+        document: Document,
+        extraction_result: ExtractionResult[T],
+        context: PipelineContext | None = None,
+    ) -> None:
         # Save to database, cloud storage, API, etc.
         await self.db.insert(
             path=document.path_identifier.path,
-            data=data.model_dump(),
+            data=extraction_result.data.model_dump(),
+            metadata=extraction_result.metadata,
         )
 ```
 
@@ -151,18 +168,21 @@ The orchestrator coordinates all components:
 
 ```python
 from document_extraction_tools.runners import ExtractionOrchestrator
+from document_extraction_tools.types import PipelineContext
 
 orchestrator = ExtractionOrchestrator.from_config(
     config=config,
     schema=InvoiceSchema,
+    file_lister_cls=MyFileLister,
     reader_cls=MyReader,
     converter_cls=MyConverter,
     extractor_cls=MyExtractor,
-    exporter_cls=MyExtractionExporter,
+    extraction_exporter_cls=MyExtractionExporter,
 )
 
-# Run the pipeline
-await orchestrator.run(file_paths)
+# Run the pipeline with optional context
+context = PipelineContext(context={"run_id": "extraction-001"})
+await orchestrator.run(file_paths, context=context)
 ```
 
 ## Concurrency Model

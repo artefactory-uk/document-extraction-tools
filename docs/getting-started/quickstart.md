@@ -42,11 +42,19 @@ from document_extraction_tools.base import (
     BaseExtractor,
     BaseExtractionExporter,
 )
-from document_extraction_tools.types import Document, DocumentBytes, PathIdentifier
+from document_extraction_tools.types import (
+    Document,
+    DocumentBytes,
+    ExtractionResult,
+    PathIdentifier,
+    PipelineContext,
+)
 
 
 class MyFileLister(BaseFileLister):
-    def list_files(self) -> list[PathIdentifier]:
+    def list_files(
+        self, context: PipelineContext | None = None
+    ) -> list[PathIdentifier]:
         # Return list of files to process
         return [
             PathIdentifier(path="/data/lease1.pdf"),
@@ -55,31 +63,45 @@ class MyFileLister(BaseFileLister):
 
 
 class MyReader(BaseReader):
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, context: PipelineContext | None = None
+    ) -> DocumentBytes:
         with open(path_identifier.path, "rb") as f:
             return DocumentBytes(
                 file_bytes=f.read(),
-                mime_type="application/pdf",
                 path_identifier=path_identifier,
             )
 
 
 class MyConverter(BaseConverter):
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, context: PipelineContext | None = None
+    ) -> Document:
         # Convert PDF bytes to Document (use your PDF library)
         ...
 
 
 class MyExtractor(BaseExtractor):
-    async def extract(self, document: Document, schema: type[LeaseSchema]) -> LeaseSchema:
+    async def extract(
+        self,
+        document: Document,
+        schema: type[LeaseSchema],
+        context: PipelineContext | None = None,
+    ) -> ExtractionResult[LeaseSchema]:
         # Extract data using LLM or rules-based system
-        ...
+        data = ...  # Your extraction logic
+        return ExtractionResult(data=data)
 
 
 class MyExtractionExporter(BaseExtractionExporter):
-    async def export(self, document: Document, data: LeaseSchema) -> None:
+    async def export(
+        self,
+        document: Document,
+        extraction_result: ExtractionResult[LeaseSchema],
+        context: PipelineContext | None = None,
+    ) -> None:
         # Save to database, file, etc.
-        print(f"Exported lease for: {data.tenant_name}")
+        print(f"Exported lease for: {extraction_result.data.tenant_name}")
 ```
 
 ## Step 3: Create Configuration
@@ -91,22 +113,42 @@ max_workers: 4
 max_concurrency: 10
 ```
 
+```yaml title="config/yaml/file_lister.yaml"
+# Add your FileLister config fields here
+```
+
+```yaml title="config/yaml/reader.yaml"
+# Add your Reader config fields here (can be empty if no config needed)
+```
+
+```yaml title="config/yaml/converter.yaml"
+# Add your Converter config fields here
+```
+
+```yaml title="config/yaml/extractor.yaml"
+# Add your Extractor config fields here
+```
+
+```yaml title="config/yaml/extraction_exporter.yaml"
+# Add your Exporter config fields here
+```
+
 ## Step 4: Run the Pipeline
 
 ```python
 import asyncio
 from pathlib import Path
-from document_extraction_tools.config import load_config, ExtractionOrchestratorConfig
+from document_extraction_tools.config import load_extraction_config
 from document_extraction_tools.runners import ExtractionOrchestrator
+from document_extraction_tools.types import PipelineContext
 
 # Load configuration
-config = load_config(
+config = load_extraction_config(
     lister_config_cls=MyFileListerConfig,
     reader_config_cls=MyReaderConfig,
     converter_config_cls=MyConverterConfig,
     extractor_config_cls=MyExtractorConfig,
-    exporter_config_cls=MyExtractionExporterConfig,
-    orchestrator_config_cls=ExtractionOrchestratorConfig,
+    extraction_exporter_config_cls=MyExtractionExporterConfig,
     config_dir=Path("config/yaml"),
 )
 
@@ -114,17 +156,20 @@ config = load_config(
 orchestrator = ExtractionOrchestrator.from_config(
     config=config,
     schema=LeaseSchema,
+    file_lister_cls=MyFileLister,
     reader_cls=MyReader,
     converter_cls=MyConverter,
     extractor_cls=MyExtractor,
-    exporter_cls=MyExtractionExporter,
+    extraction_exporter_cls=MyExtractionExporter,
 )
 
 # List files and run
 file_lister = MyFileLister(config.file_lister)
 file_paths = file_lister.list_files()
 
-asyncio.run(orchestrator.run(file_paths))
+# Run with optional shared context
+context = PipelineContext(context={"run_id": "quickstart-001"})
+asyncio.run(orchestrator.run(file_paths, context=context))
 ```
 
 ## Next Steps

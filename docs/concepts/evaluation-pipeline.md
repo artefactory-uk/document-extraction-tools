@@ -27,7 +27,7 @@ flowchart LR
     TDL -->|"list[EvaluationExample]"| R
     R -->|DocumentBytes| C
     C -->|Document| E
-    E -->|Prediction| EV
+    E -->|ExtractionResult| EV
     TDL -.->|GroundTruth| EV
     EV -->|"list[EvaluationResult]"| EX
     EX -->|Persisted| Storage[(Storage)]
@@ -48,17 +48,18 @@ sequenceDiagram
     participant EX as Exporter
 
     Note over O: EvaluationExample contains<br/>PathIdentifier + GroundTruth
+    Note over O: PipelineContext passed to all components
 
     O->>TP: Submit ingest task
-    TP->>R: read(path_identifier)
+    TP->>R: read(path_identifier, context)
     R-->>TP: DocumentBytes
-    TP->>C: convert(document_bytes)
+    TP->>C: convert(document_bytes, context)
     C-->>TP: Document
     TP-->>O: Document
 
-    O->>E: extract(document, schema)
+    O->>E: extract(document, schema, context)
     Note over E: Async I/O (e.g., LLM API call)
-    E-->>O: Prediction (ExtractionSchema)
+    E-->>O: ExtractionResult
 
     O->>TP: Submit evaluation tasks
     TP->>EV: evaluate(ground_truth, prediction)
@@ -66,7 +67,7 @@ sequenceDiagram
     TP-->>O: list[EvaluationResult]
 
     Note over O: After all examples complete
-    O->>EX: export(all_results)
+    O->>EX: export(all_results, context)
     Note over EX: Async I/O
     EX-->>O: Done
 ```
@@ -217,6 +218,7 @@ flowchart TB
 ```python
 from document_extraction_tools.config import load_evaluation_config
 from document_extraction_tools.runners import EvaluationOrchestrator
+from document_extraction_tools.types import PipelineContext
 
 config = load_evaluation_config(
     test_data_loader_config_cls=MyTestDataLoaderConfig,
@@ -225,7 +227,6 @@ config = load_evaluation_config(
     converter_config_cls=MyConverterConfig,
     extractor_config_cls=MyExtractorConfig,
     evaluation_exporter_config_cls=MyEvaluationExporterConfig,
-    orchestrator_config_cls=EvaluationOrchestratorConfig,
 )
 
 orchestrator = EvaluationOrchestrator.from_config(...)
@@ -235,6 +236,7 @@ examples = MyTestDataLoader(config.test_data_loader).load_test_data(
     PathIdentifier(path="/path/to/eval-set")
 )
 
-# Run evaluation
-await orchestrator.run(examples)
+# Run evaluation with optional context
+context = PipelineContext(context={"run_id": "eval-001"})
+await orchestrator.run(examples, context=context)
 ```

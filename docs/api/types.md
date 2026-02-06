@@ -12,9 +12,11 @@ from document_extraction_tools.types import (
     Page,
     TextData,
     ImageData,
+    ExtractionResult,
     EvaluationExample,
     EvaluationResult,
     ExtractionSchema,
+    PipelineContext,
 )
 ```
 
@@ -39,10 +41,10 @@ from document_extraction_tools.types import PathIdentifier
 # Simple path reference
 path_id = PathIdentifier(path="/data/leases/lease_001.pdf")
 
-# With additional context (e.g., for cloud storage)
+# With additional metadata (e.g., for cloud storage)
 path_id = PathIdentifier(
     path="gs://my-bucket/documents/lease.pdf",
-    context={"bucket": "my-bucket", "region": "us-central1"}
+    metadata={"bucket": "my-bucket", "region": "us-central1"}
 )
 ```
 
@@ -68,7 +70,6 @@ with open("lease.pdf", "rb") as f:
     doc_bytes = DocumentBytes(
         file_bytes=f.read(),
         path_identifier=PathIdentifier(path="lease.pdf"),
-        mime_type="application/pdf",
     )
 ```
 
@@ -201,6 +202,79 @@ class LeaseSchema(BaseModel):
 
 ---
 
+## ExtractionResult
+
+Wraps the extracted schema data along with optional metadata. This is the return type of the `BaseExtractor.extract()` method.
+
+::: document_extraction_tools.types.ExtractionResult
+    options:
+      show_root_heading: false
+      heading_level: 3
+      members: true
+      show_source: false
+
+**Example:**
+
+```python
+from document_extraction_tools.types import ExtractionResult
+
+# Create an extraction result with metadata
+result = ExtractionResult(
+    data=LeaseSchema(
+        landlord_name="John Smith",
+        tenant_name="Jane Doe",
+        monthly_rent=2500.00,
+    ),
+    metadata={
+        "model": "gpt-4",
+        "tokens_used": 1234,
+        "confidence": 0.95,
+    },
+)
+
+# Access the extracted data
+print(result.data.landlord_name)  # "John Smith"
+
+# Access metadata
+print(result.metadata.get("confidence"))  # 0.95
+```
+
+---
+
+## PipelineContext
+
+A shared context object that can be passed through pipeline components to maintain state or share information across the pipeline.
+
+::: document_extraction_tools.types.PipelineContext
+    options:
+      show_root_heading: false
+      heading_level: 3
+      members: true
+      show_source: false
+
+**Example:**
+
+```python
+from document_extraction_tools.types import PipelineContext
+
+# Create context with shared values
+context = PipelineContext(
+    context={
+        "run_id": "extraction-2024-01-15",
+        "environment": "production",
+        "custom_settings": {"verbose": True},
+    }
+)
+
+# Access context values in components
+run_id = context.context.get("run_id")
+
+# Pass to orchestrator.run()
+await orchestrator.run(file_paths, context=context)
+```
+
+---
+
 ## EvaluationExample
 
 Pairs a ground-truth schema with a source document for evaluation.
@@ -215,15 +289,17 @@ Pairs a ground-truth schema with a source document for evaluation.
 **Example:**
 
 ```python
-from document_extraction_tools.types import EvaluationExample, PathIdentifier
+from document_extraction_tools.types import EvaluationExample, ExtractionResult, PathIdentifier
 
 example = EvaluationExample(
     id="lease_001",
     path_identifier=PathIdentifier(path="data/leases/lease_001.pdf"),
-    true=LeaseSchema(
-        landlord_name="John Smith",
-        tenant_name="Jane Doe",
-        monthly_rent=2500.00,
+    true=ExtractionResult(
+        data=LeaseSchema(
+            landlord_name="John Smith",
+            tenant_name="Jane Doe",
+            monthly_rent=2500.00,
+        ),
     ),
 )
 ```

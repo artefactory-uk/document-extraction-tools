@@ -60,7 +60,12 @@ import json
 from pathlib import Path
 from document_extraction_tools.base import BaseTestDataLoader
 from document_extraction_tools.config import BaseTestDataLoaderConfig
-from document_extraction_tools.types import EvaluationExample, PathIdentifier
+from document_extraction_tools.types import (
+    EvaluationExample,
+    ExtractionResult,
+    PathIdentifier,
+    PipelineContext,
+)
 
 
 class JSONTestDataLoaderConfig(BaseTestDataLoaderConfig):
@@ -72,7 +77,9 @@ class JSONTestDataLoader(BaseTestDataLoader[LeaseSchema]):
         super().__init__(config)
 
     def load_test_data(
-        self, path_identifier: PathIdentifier
+        self,
+        path_identifier: PathIdentifier,
+        context: PipelineContext | None = None,
     ) -> list[EvaluationExample[LeaseSchema]]:
         with open(path_identifier.path) as f:
             data = json.load(f)
@@ -82,7 +89,9 @@ class JSONTestDataLoader(BaseTestDataLoader[LeaseSchema]):
             examples.append(EvaluationExample(
                 id=item["file_path"],
                 path_identifier=PathIdentifier(path=item["file_path"]),
-                true=LeaseSchema(**item["ground_truth"])
+                true=ExtractionResult(
+                    data=LeaseSchema(**item["ground_truth"]),
+                ),
             ))
 
         return examples
@@ -99,7 +108,7 @@ The [examples repository](https://github.com/artefactory-uk/document-extraction-
 ```python
 from document_extraction_tools.base import BaseEvaluator
 from document_extraction_tools.config import BaseEvaluatorConfig
-from document_extraction_tools.types import EvaluationResult
+from document_extraction_tools.types import EvaluationResult, ExtractionResult, PipelineContext
 
 
 class FieldAccuracyEvaluatorConfig(BaseEvaluatorConfig):
@@ -113,12 +122,17 @@ class FieldAccuracyEvaluator(BaseEvaluator[LeaseSchema]):
         super().__init__(config)
 
     def evaluate(
-        self, true: LeaseSchema, pred: LeaseSchema
+        self,
+        true: ExtractionResult[LeaseSchema],
+        pred: ExtractionResult[LeaseSchema],
+        context: PipelineContext | None = None,
     ) -> EvaluationResult:
-        fields = list(true.model_fields.keys())
+        true_data = true.data
+        pred_data = pred.data
+        fields = list(true_data.model_fields.keys())
         correct = sum(
             1 for field in fields
-            if getattr(true, field) == getattr(pred, field)
+            if getattr(true_data, field) == getattr(pred_data, field)
         )
 
         accuracy = correct / len(fields) if fields else 0.0
@@ -145,13 +159,18 @@ class NumericToleranceEvaluator(BaseEvaluator[LeaseSchema]):
         self.config = config
 
     def evaluate(
-        self, true: LeaseSchema, pred: LeaseSchema
+        self,
+        true: ExtractionResult[LeaseSchema],
+        pred: ExtractionResult[LeaseSchema],
+        context: PipelineContext | None = None,
     ) -> EvaluationResult:
+        true_data = true.data
+        pred_data = pred.data
         # Check monthly_rent field
-        if true.monthly_rent == 0:
-            within_tolerance = pred.monthly_rent == 0
+        if true_data.monthly_rent == 0:
+            within_tolerance = pred_data.monthly_rent == 0
         else:
-            relative_error = abs(true.monthly_rent - pred.monthly_rent) / true.monthly_rent
+            relative_error = abs(true_data.monthly_rent - pred_data.monthly_rent) / true_data.monthly_rent
             within_tolerance = relative_error <= self.config.tolerance
 
         return EvaluationResult(
@@ -179,10 +198,13 @@ class StringSimilarityEvaluator(BaseEvaluator[LeaseSchema]):
         self.config = config
 
     def evaluate(
-        self, true: LeaseSchema, pred: LeaseSchema
+        self,
+        true: ExtractionResult[LeaseSchema],
+        pred: ExtractionResult[LeaseSchema],
+        context: PipelineContext | None = None,
     ) -> EvaluationResult:
-        true_value = getattr(true, self.config.field_name, "")
-        pred_value = getattr(pred, self.config.field_name, "")
+        true_value = getattr(true.data, self.config.field_name, "")
+        pred_value = getattr(pred.data, self.config.field_name, "")
 
         similarity = SequenceMatcher(
             None,
@@ -204,7 +226,7 @@ import csv
 from pathlib import Path
 from document_extraction_tools.base import BaseEvaluationExporter
 from document_extraction_tools.config import BaseEvaluationExporterConfig
-from document_extraction_tools.types import Document, EvaluationResult
+from document_extraction_tools.types import Document, EvaluationResult, PipelineContext
 
 
 class CSVEvaluationExporterConfig(BaseEvaluationExporterConfig):
@@ -217,7 +239,9 @@ class CSVEvaluationExporter(BaseEvaluationExporter):
         self.config = config
 
     async def export(
-        self, results: list[tuple[Document, list[EvaluationResult]]]
+        self,
+        results: list[tuple[Document, list[EvaluationResult]]],
+        context: PipelineContext | None = None,
     ) -> None:
         output_path = Path(self.config.output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -283,12 +307,9 @@ max_concurrency: 10
 ```python
 import asyncio
 from pathlib import Path
-from document_extraction_tools.config import (
-    load_evaluation_config,
-    EvaluationOrchestratorConfig,
-)
+from document_extraction_tools.config import load_evaluation_config
 from document_extraction_tools.runners import EvaluationOrchestrator
-from document_extraction_tools.types import PathIdentifier
+from document_extraction_tools.types import PathIdentifier, PipelineContext
 
 async def main():
     # Load configuration
@@ -303,7 +324,6 @@ async def main():
         converter_config_cls=PDFConverterConfig,
         extractor_config_cls=GeminiExtractorConfig,
         evaluation_exporter_config_cls=CSVEvaluationExporterConfig,
-        orchestrator_config_cls=EvaluationOrchestratorConfig,
         config_dir=Path("config/yaml"),
     )
 
@@ -331,8 +351,9 @@ async def main():
 
     print(f"Evaluating {len(examples)} lease documents...")
 
-    # Run evaluation
-    await orchestrator.run(examples)
+    # Run evaluation with optional shared context
+    context = PipelineContext(context={"run_id": "eval-001"})
+    await orchestrator.run(examples, context=context)
 
     print(f"\nResults saved to {config.evaluation_exporter.output_path}")
 

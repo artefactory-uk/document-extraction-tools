@@ -24,6 +24,15 @@ Each component has a matching base config class that you subclass to add your ow
 - `BaseEvaluationExporterConfig`
 - `EvaluationOrchestratorConfig`
 
+### Pipeline Config Classes
+
+All component configs are aggregated into master pipeline config classes:
+
+- `ExtractionPipelineConfig` - Contains all extraction pipeline component configs
+- `EvaluationPipelineConfig` - Contains all evaluation pipeline component configs
+
+These pipeline configs are returned by the config loaders and can be passed directly to the orchestrator's `from_config()` factory method.
+
 ## Creating Custom Configs
 
 Subclass the base config to add your specific fields:
@@ -87,21 +96,20 @@ LevenshteinEvaluatorConfig:
 
 ```python
 from pathlib import Path
-from document_extraction_tools.config import load_config, ExtractionOrchestratorConfig
+from document_extraction_tools.config import load_extraction_config
 
-config = load_config(
+config = load_extraction_config(
     lister_config_cls=MyFileListerConfig,
     reader_config_cls=MyReaderConfig,
     converter_config_cls=MyConverterConfig,
     extractor_config_cls=MyExtractorConfig,
-    exporter_config_cls=MyExtractionExporterConfig,
-    orchestrator_config_cls=ExtractionOrchestratorConfig,
+    extraction_exporter_config_cls=MyExtractionExporterConfig,
     config_dir=Path("config/yaml"),
 )
 
 # Access individual configs
 print(config.extractor.model_name)
-print(config.orchestrator.max_workers)
+print(config.extraction_orchestrator.max_workers)
 ```
 
 ### Evaluation Config
@@ -119,10 +127,15 @@ config = load_evaluation_config(
     converter_config_cls=MyConverterConfig,
     extractor_config_cls=MyExtractorConfig,
     evaluation_exporter_config_cls=MyEvaluationExporterConfig,
-    orchestrator_config_cls=EvaluationOrchestratorConfig,
     config_dir=Path("config/yaml"),
 )
 ```
+
+## Pipeline Context
+
+In addition to static configuration, you can pass runtime state through the pipeline using `PipelineContext`. This is useful for run IDs, environment settings, and cross-cutting concerns like logging and tracing.
+
+See the dedicated [Pipeline Context](pipeline-context.md) guide for detailed usage and examples.
 
 ## Environment Variables
 

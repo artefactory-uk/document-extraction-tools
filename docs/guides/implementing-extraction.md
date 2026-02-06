@@ -75,7 +75,7 @@ class LeaseSchema(BaseModel):
 from pathlib import Path
 from document_extraction_tools.base import BaseFileLister
 from document_extraction_tools.config import BaseFileListerConfig
-from document_extraction_tools.types import PathIdentifier
+from document_extraction_tools.types import PathIdentifier, PipelineContext
 
 
 class LocalFileListerConfig(BaseFileListerConfig):
@@ -88,7 +88,9 @@ class LocalFileLister(BaseFileLister):
         super().__init__(config)
         self.config = config
 
-    def list_files(self) -> list[PathIdentifier]:
+    def list_files(
+        self, context: PipelineContext | None = None
+    ) -> list[PathIdentifier]:
         directory = Path(self.config.input_directory)
         return [
             PathIdentifier(path=str(p))
@@ -101,7 +103,7 @@ class LocalFileLister(BaseFileLister):
 ```python
 from document_extraction_tools.base import BaseReader
 from document_extraction_tools.config import BaseReaderConfig
-from document_extraction_tools.types import DocumentBytes, PathIdentifier
+from document_extraction_tools.types import DocumentBytes, PathIdentifier, PipelineContext
 
 
 class LocalReaderConfig(BaseReaderConfig):
@@ -112,21 +114,14 @@ class LocalReader(BaseReader):
     def __init__(self, config: LocalReaderConfig) -> None:
         super().__init__(config)
 
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, context: PipelineContext | None = None
+    ) -> DocumentBytes:
         path = Path(path_identifier.path)
-
-        # Determine MIME type
-        mime_types = {
-            ".pdf": "application/pdf",
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-        }
-        mime_type = mime_types.get(path.suffix.lower(), "application/octet-stream")
 
         with open(path, "rb") as f:
             return DocumentBytes(
                 file_bytes=f.read(),
-                mime_type=mime_type,
                 path_identifier=path_identifier,
             )
 ```
@@ -136,7 +131,7 @@ class LocalReader(BaseReader):
 ```python
 from document_extraction_tools.base import BaseConverter
 from document_extraction_tools.config import BaseConverterConfig
-from document_extraction_tools.types import Document, DocumentBytes, Page
+from document_extraction_tools.types import Document, DocumentBytes, Page, PipelineContext
 
 
 class PDFConverterConfig(BaseConverterConfig):
@@ -148,7 +143,9 @@ class PDFConverter(BaseConverter):
         super().__init__(config)
         self.config = config
 
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, context: PipelineContext | None = None
+    ) -> Document:
         # Use your preferred PDF library (pypdf, pymupdf, etc.)
         pages = self._parse_pdf(document_bytes.file_bytes)
 
@@ -173,7 +170,7 @@ This example shows a Gemini-based extractor similar to the [examples repository]
 import google.generativeai as genai
 from document_extraction_tools.base import BaseExtractor
 from document_extraction_tools.config import BaseExtractorConfig
-from document_extraction_tools.types import Document
+from document_extraction_tools.types import Document, ExtractionResult, ImageData, PipelineContext
 
 
 class GeminiExtractorConfig(BaseExtractorConfig):
@@ -188,16 +185,19 @@ class GeminiImageExtractor(BaseExtractor):
         self.model = genai.GenerativeModel(config.model_name)
 
     async def extract(
-        self, document: Document, schema: type[LeaseSchema]
-    ) -> LeaseSchema:
+        self,
+        document: Document,
+        schema: type[LeaseSchema],
+        context: PipelineContext | None = None,
+    ) -> ExtractionResult[LeaseSchema]:
         # Build prompt with schema description
         prompt = self._build_prompt(schema)
 
         # Prepare image parts from document pages
         parts = [prompt]
         for page in document.pages:
-            if page.image:
-                parts.append(page.image)
+            if isinstance(page.data, ImageData):
+                parts.append(page.data.content)
 
         # Call Gemini with images
         response = await self.model.generate_content_async(
@@ -209,8 +209,15 @@ class GeminiImageExtractor(BaseExtractor):
             ),
         )
 
-        # Parse and validate response
-        return schema.model_validate_json(response.text)
+        # Parse and validate response, wrap in ExtractionResult
+        data = schema.model_validate_json(response.text)
+        return ExtractionResult(
+            data=data,
+            metadata={
+                "model": self.config.model_name,
+                "temperature": self.config.temperature,
+            },
+        )
 
     def _build_prompt(self, schema: type) -> str:
         return f"""Extract the following information from the lease document images.
@@ -227,7 +234,7 @@ import json
 from pathlib import Path
 from document_extraction_tools.base import BaseExtractionExporter
 from document_extraction_tools.config import BaseExtractionExporterConfig
-from document_extraction_tools.types import Document
+from document_extraction_tools.types import Document, ExtractionResult, PipelineContext
 
 
 class JSONExporterConfig(BaseExtractionExporterConfig):
@@ -239,7 +246,12 @@ class JSONExporter(BaseExtractionExporter):
         super().__init__(config)
         self.config = config
 
-    async def export(self, document: Document, data: LeaseSchema) -> None:
+    async def export(
+        self,
+        document: Document,
+        extraction_result: ExtractionResult[LeaseSchema],
+        context: PipelineContext | None = None,
+    ) -> None:
         output_dir = Path(self.config.output_directory)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -247,8 +259,14 @@ class JSONExporter(BaseExtractionExporter):
         input_name = Path(document.path_identifier.path).stem
         output_path = output_dir / f"{input_name}.json"
 
+        # Export both data and metadata
+        output = {
+            "data": extraction_result.data.model_dump(),
+            "metadata": extraction_result.metadata,
+        }
+
         with open(output_path, "w") as f:
-            json.dump(data.model_dump(), f, indent=2)
+            json.dump(output, f, indent=2)
 ```
 
 ## Step 3: Create Configuration Files
@@ -281,18 +299,18 @@ max_concurrency: 10
 ```python
 import asyncio
 from pathlib import Path
-from document_extraction_tools.config import load_config, ExtractionOrchestratorConfig
+from document_extraction_tools.config import load_extraction_config
 from document_extraction_tools.runners import ExtractionOrchestrator
+from document_extraction_tools.types import PipelineContext
 
 async def main():
     # Load configuration
-    config = load_config(
+    config = load_extraction_config(
         lister_config_cls=LocalFileListerConfig,
         reader_config_cls=LocalReaderConfig,
         converter_config_cls=PDFConverterConfig,
         extractor_config_cls=GeminiExtractorConfig,
-        exporter_config_cls=JSONExporterConfig,
-        orchestrator_config_cls=ExtractionOrchestratorConfig,
+        extraction_exporter_config_cls=JSONExporterConfig,
         config_dir=Path("config/yaml"),
     )
 
@@ -300,10 +318,11 @@ async def main():
     orchestrator = ExtractionOrchestrator.from_config(
         config=config,
         schema=LeaseSchema,
+        file_lister_cls=LocalFileLister,
         reader_cls=LocalReader,
         converter_cls=PDFConverter,
         extractor_cls=GeminiImageExtractor,
-        exporter_cls=JSONExporter,
+        extraction_exporter_cls=JSONExporter,
     )
 
     # List files
@@ -312,8 +331,9 @@ async def main():
 
     print(f"Processing {len(file_paths)} lease documents...")
 
-    # Run pipeline
-    await orchestrator.run(file_paths)
+    # Run pipeline with optional shared context
+    context = PipelineContext(context={"run_id": "lease-extraction-001"})
+    await orchestrator.run(file_paths, context=context)
 
     print("Done!")
 
