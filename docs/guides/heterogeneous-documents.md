@@ -249,7 +249,7 @@ async def main():
     # Access shared components from the orchestrator (created by from_config())
     reader = invoice_pipeline.reader
     converter = invoice_pipeline.converter
-    classifier = DocumentClassifier(invoice_config.extractor)
+    classifier = DocumentClassifier(invoice_config)
 
     # Get all documents using the orchestrator's file lister
     file_paths = invoice_pipeline.file_lister.list_files()

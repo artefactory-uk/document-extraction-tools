@@ -107,9 +107,6 @@ class LocalReaderConfig(BaseReaderConfig):
 
 
 class LocalReader(BaseReader):
-    def __init__(self, config: LocalReaderConfig) -> None:
-        super().__init__(config)
-
     def read(
         self, path_identifier: PathIdentifier, context: PipelineContext | None = None
     ) -> DocumentBytes:
@@ -173,7 +170,7 @@ class GeminiExtractorConfig(BaseExtractorConfig):
 class GeminiImageExtractor(BaseExtractor):
     def __init__(self, config: GeminiExtractorConfig) -> None:
         super().__init__(config)
-        self.model = genai.GenerativeModel(config.model_name)
+        self.model = genai.GenerativeModel(self.config.model_name)
 
     async def extract(
         self,
