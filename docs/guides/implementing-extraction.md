@@ -285,6 +285,7 @@ max_concurrency: 10
 
 ```python
 import asyncio
+import uuid
 from pathlib import Path
 from document_extraction_tools.config import load_extraction_config
 from document_extraction_tools.runners import ExtractionOrchestrator
@@ -319,7 +320,7 @@ async def main():
     print(f"Processing {len(file_paths)} lease documents...")
 
     # Run pipeline with optional shared context
-    context = PipelineContext(context={"run_id": "lease-extraction-001"})
+    context = PipelineContext(context={"run_id": str(uuid.uuid4())[:8]})
     await orchestrator.run(file_paths, context=context)
 
     print("Done!")

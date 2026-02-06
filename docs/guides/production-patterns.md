@@ -56,14 +56,16 @@ async def process_document(
 
 
 async def main():
-    # Initialize components
-    reader = MyReader(reader_config)
-    converter = MyConverter(converter_config)
-    extractor = MyExtractor(extractor_config)
-    exporter = MyExporter(exporter_config)
+    # Initialize components (configs come from load_extraction_config())
+    # You can also use ExtractionOrchestrator.from_config() for managed setup
+    config = load_extraction_config(...)
+    reader = MyReader(config.reader)
+    converter = MyConverter(config.converter)
+    extractor = MyExtractor(config.extractor)
+    exporter = MyExporter(config.extraction_exporter)
 
     # Get files to process
-    file_lister = MyFileLister(lister_config)
+    file_lister = MyFileLister(config.file_lister)
     file_paths = file_lister.list_files()
 
     # Process each document
@@ -382,11 +384,12 @@ from pathlib import Path
 
 
 async def main():
-    # Initialize components
-    reader = LocalReader(reader_config)
-    converter = PDFConverter(converter_config)
-    extractor = GeminiExtractor(extractor_config)
-    exporter = JSONExporter(exporter_config)
+    # Initialize components (configs come from load_extraction_config())
+    config = load_extraction_config(...)
+    reader = LocalReader(config.reader)
+    converter = PDFConverter(config.converter)
+    extractor = GeminiExtractor(config.extractor)
+    exporter = JSONExporter(config.extraction_exporter)
 
     # Create checkpoint manager
     checkpoint_manager = CheckpointManager(Path("./checkpoints"))
@@ -797,7 +800,7 @@ class IdempotentExporter(BaseExtractionExporter):
     async def export(
         self,
         document: Document,
-        extraction_result: ExtractionResult,
+        data: ExtractionResult,
         context: PipelineContext | None = None,
     ) -> None:
         # Use document ID as unique key
@@ -805,9 +808,9 @@ class IdempotentExporter(BaseExtractionExporter):
 
         if existing:
             # Update instead of insert
-            await self.db.update(document.id, extraction_result.data.model_dump())
+            await self.db.update(document.id, data.data.model_dump())
         else:
-            await self.db.insert(document.id, extraction_result.data.model_dump())
+            await self.db.insert(document.id, data.data.model_dump())
 ```
 
 ## Summary

@@ -246,14 +246,13 @@ async def main():
         contract_pipeline=contract_pipeline,
     )
 
-    # Initialize shared components
-    reader = LocalReader(invoice_config.reader)
-    converter = PDFConverter(invoice_config.converter)
+    # Access shared components from the orchestrator (created by from_config())
+    reader = invoice_pipeline.reader
+    converter = invoice_pipeline.converter
     classifier = DocumentClassifier(invoice_config.extractor)
 
-    # Get all documents
-    file_lister = LocalFileLister(invoice_config.file_lister)
-    file_paths = file_lister.list_files()
+    # Get all documents using the orchestrator's file lister
+    file_paths = invoice_pipeline.file_lister.list_files()
 
     # Process with routing
     results = await process_heterogeneous_documents(

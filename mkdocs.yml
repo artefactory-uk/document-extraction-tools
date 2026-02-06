@@ -98,6 +98,8 @@ nav:
   - Guides:
       - Implementing Extraction: guides/implementing-extraction.md
       - Implementing Evaluation: guides/implementing-evaluation.md
+      - Heterogeneous Documents: guides/heterogeneous-documents.md
+      - Production Patterns: guides/production-patterns.md
   - Examples: examples.md
   - API Reference:
       - Base Classes: api/base-classes.md
