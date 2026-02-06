@@ -4,9 +4,9 @@ Configuration classes and loading utilities.
 
 ## Config Loaders
 
-### load_config
+### load_extraction_config
 
-::: document_extraction_tools.config.load_config
+::: document_extraction_tools.config.load_extraction_config
     options:
       show_root_heading: true
       heading_level: 4
@@ -14,6 +14,24 @@ Configuration classes and loading utilities.
 ### load_evaluation_config
 
 ::: document_extraction_tools.config.load_evaluation_config
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+## Pipeline Configs
+
+These master config classes aggregate all component configurations for a pipeline.
+
+### ExtractionPipelineConfig
+
+::: document_extraction_tools.config.ExtractionPipelineConfig
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+### EvaluationPipelineConfig
+
+::: document_extraction_tools.config.EvaluationPipelineConfig
     options:
       show_root_heading: true
       heading_level: 4
