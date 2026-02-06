@@ -293,7 +293,10 @@ from document_extraction_tools.types import EvaluationExample, ExtractionResult,
 
 example = EvaluationExample(
     id="lease_001",
-    path_identifier=PathIdentifier(path="data/leases/lease_001.pdf"),
+    path_identifier=PathIdentifier(
+        path="data/leases/lease_001.pdf",
+        metadata={"source": "local", "mime_type": "application/pdf"},
+    ),
     true=ExtractionResult(
         data=LeaseSchema(
             landlord_name="John Smith",

@@ -93,18 +93,14 @@ class MyExtractor(BaseExtractor):
         schema: type,
         context: PipelineContext | None = None,
     ) -> ExtractionResult:
-        # Get environment-specific settings
-        environment = context.context.get("environment", "development") if context else "development"
+        # Access runtime context values
+        run_id = context.context.get("run_id") if context else None
 
-        # Adjust behavior based on context
-        if environment == "production":
-            # Use more conservative settings in production
-            temperature = 0.0
-        else:
-            temperature = 0.1
+        # Use context for logging/tracing
+        print(f"[{run_id}] Extracting from: {document.id}")
 
-        # Extract with the appropriate settings
-        result = await self._call_llm(document, schema, temperature)
+        # Extract data
+        result = await self._call_llm(document, schema)
         return ExtractionResult(data=result)
 ```
 
