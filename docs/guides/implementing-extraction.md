@@ -314,7 +314,7 @@ async def main():
     )
 
     # List files
-    file_lister = LocalFileLister(config.file_lister)
+    file_lister = LocalFileLister(config)
     file_paths = file_lister.list_files()
 
     print(f"Processing {len(file_paths)} lease documents...")

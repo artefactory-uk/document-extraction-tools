@@ -525,11 +525,11 @@ Then run separate pipelines:
 ```python
 async def main():
     # Invoice pipeline
-    invoice_files = InvoiceFileLister(config.file_lister).list_files()
+    invoice_files = InvoiceFileLister(config).list_files()
     await invoice_pipeline.run(invoice_files)
 
     # Receipt pipeline
-    receipt_files = ReceiptFileLister(config.file_lister).list_files()
+    receipt_files = ReceiptFileLister(config).list_files()
     await receipt_pipeline.run(receipt_files)
 ```
 

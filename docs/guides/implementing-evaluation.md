@@ -73,9 +73,6 @@ class JSONTestDataLoaderConfig(BaseTestDataLoaderConfig):
 
 
 class JSONTestDataLoader(BaseTestDataLoader[LeaseSchema]):
-    def __init__(self, config: JSONTestDataLoaderConfig) -> None:
-        super().__init__(config)
-
     def load_test_data(
         self,
         path_identifier: PathIdentifier,
@@ -117,9 +114,6 @@ class FieldAccuracyEvaluatorConfig(BaseEvaluatorConfig):
 
 class FieldAccuracyEvaluator(BaseEvaluator[LeaseSchema]):
     """Measures percentage of fields that exactly match."""
-
-    def __init__(self, config: FieldAccuracyEvaluatorConfig) -> None:
-        super().__init__(config)
 
     def evaluate(
         self,
@@ -333,7 +327,7 @@ async def main():
     )
 
     # Load test data
-    test_data_loader = JSONTestDataLoader(config.test_data_loader)
+    test_data_loader = JSONTestDataLoader(config)
     examples = test_data_loader.load_test_data(
         PathIdentifier(path="data/evaluation/ground_truth.json")
     )

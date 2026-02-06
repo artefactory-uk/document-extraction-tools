@@ -236,7 +236,7 @@ config = load_evaluation_config(
 orchestrator = EvaluationOrchestrator.from_config(...)
 
 # Load test data
-examples = MyTestDataLoader(config.test_data_loader).load_test_data(
+examples = MyTestDataLoader(config).load_test_data(
     PathIdentifier(path="/path/to/eval-set")
 )
 

@@ -165,7 +165,7 @@ orchestrator = ExtractionOrchestrator.from_config(
 )
 
 # List files and run
-file_lister = MyFileLister(config.file_lister)
+file_lister = MyFileLister(config)
 file_paths = file_lister.list_files()
 
 # Run with optional shared context
