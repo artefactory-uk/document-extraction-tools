@@ -33,8 +33,10 @@ from document_extraction_tools.types import (
     DocumentBytes,
     EvaluationExample,
     EvaluationResult,
+    ExtractionResult,
     Page,
     PathIdentifier,
+    PipelineContext,
     TextData,
 )
 
@@ -48,30 +50,33 @@ class DummySchema(BaseModel):
 class DummyReader(BaseReader):
     """Reader stub that records calls."""
 
-    def __init__(self, config: BaseReaderConfig) -> None:
+    def __init__(self, config: BaseReaderConfig | EvaluationPipelineConfig) -> None:
         """Initialize the reader stub."""
         super().__init__(config)
         self.read_calls: list[PathIdentifier] = []
 
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, _context: PipelineContext | None = None
+    ) -> DocumentBytes:
         """Return fixed bytes while tracking read calls."""
         self.read_calls.append(path_identifier)
         return DocumentBytes(
             file_bytes=b"data",
             path_identifier=path_identifier,
-            mime_type="text/plain",
         )
 
 
 class DummyConverter(BaseConverter):
     """Converter stub that records calls."""
 
-    def __init__(self, config: BaseConverterConfig) -> None:
+    def __init__(self, config: BaseConverterConfig | EvaluationPipelineConfig) -> None:
         """Initialize the converter stub."""
         super().__init__(config)
         self.convert_calls: list[DocumentBytes] = []
 
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, _context: PipelineContext | None = None
+    ) -> Document:
         """Return a minimal document while tracking conversion calls."""
         self.convert_calls.append(document_bytes)
         return Document(
@@ -86,20 +91,27 @@ class DummyConverter(BaseConverter):
 class DummyExtractor(BaseExtractor):
     """Extractor stub that can be configured to fail."""
 
-    def __init__(self, config: BaseExtractorConfig, fail_on: str | None = None) -> None:
+    def __init__(
+        self,
+        config: BaseExtractorConfig | EvaluationPipelineConfig,
+        fail_on: str | None = None,
+    ) -> None:
         """Initialize the extractor stub with an optional failure id."""
         super().__init__(config)
         self.fail_on = fail_on
         self.extract_calls: list[Document] = []
 
     async def extract(
-        self, document: Document, schema: type[DummySchema]
-    ) -> DummySchema:
+        self,
+        document: Document,
+        schema: type[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> ExtractionResult[DummySchema]:
         """Return a schema instance or raise for configured ids."""
         self.extract_calls.append(document)
         if self.fail_on is not None and document.id == self.fail_on:
             raise RuntimeError("boom")
-        return schema(value=f"pred:{document.id}")
+        return ExtractionResult(data=schema(value=f"pred:{document.id}"))
 
 
 class DummyEvaluatorConfig(BaseEvaluatorConfig):
@@ -111,17 +123,22 @@ class DummyEvaluatorConfig(BaseEvaluatorConfig):
 class DummyEvaluator(BaseEvaluator[DummySchema]):
     """Evaluator stub that records calls."""
 
-    def __init__(self, config: DummyEvaluatorConfig) -> None:
+    def __init__(self, config: DummyEvaluatorConfig | EvaluationPipelineConfig) -> None:
         """Initialize the evaluator stub."""
         super().__init__(config)
         self.evaluate_calls: list[tuple[DummySchema, DummySchema]] = []
 
-    def evaluate(self, true: DummySchema, pred: DummySchema) -> EvaluationResult:
+    def evaluate(
+        self,
+        true: ExtractionResult[DummySchema],
+        pred: ExtractionResult[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> EvaluationResult:
         """Return a dummy evaluation result while tracking calls."""
-        self.evaluate_calls.append((true, pred))
+        self.evaluate_calls.append((true.data, pred.data))
         return EvaluationResult(
             name="dummy",
-            result=true.value == pred.value,
+            result=true.data.value == pred.data.value,
             description="Equality check",
         )
 
@@ -130,7 +147,9 @@ class DummyTestDataLoader(BaseTestDataLoader[DummySchema]):
     """Test data loader stub for wiring tests."""
 
     def load_test_data(
-        self, _path_identifier: PathIdentifier
+        self,
+        _path_identifier: PathIdentifier,
+        _context: PipelineContext | None = None,
     ) -> list[EvaluationExample[DummySchema]]:
         """Return an empty set of examples for tests."""
         return []
@@ -139,13 +158,18 @@ class DummyTestDataLoader(BaseTestDataLoader[DummySchema]):
 class DummyEvaluationExporter(BaseEvaluationExporter):
     """Evaluation exporter stub that records calls."""
 
-    def __init__(self, config: BaseEvaluationExporterConfig) -> None:
+    def __init__(
+        self,
+        config: BaseEvaluationExporterConfig | EvaluationPipelineConfig,
+    ) -> None:
         """Initialize the exporter stub."""
         super().__init__(config)
         self.export_calls: list[list[tuple[Document, list[EvaluationResult]]]] = []
 
     async def export(
-        self, results: list[tuple[Document, list[EvaluationResult]]]
+        self,
+        results: list[tuple[Document, list[EvaluationResult]]],
+        _context: PipelineContext | None = None,
     ) -> None:
         """Record evaluation results without persisting data."""
         self.export_calls.append(results)
@@ -154,7 +178,7 @@ class DummyEvaluationExporter(BaseEvaluationExporter):
 def test_from_config_wires_components_and_evaluators() -> None:
     """Instantiate and wire evaluation components from config."""
     config = EvaluationPipelineConfig(
-        orchestrator=EvaluationOrchestratorConfig(max_workers=1, max_concurrency=2),
+        evaluation_orchestrator=EvaluationOrchestratorConfig(),
         test_data_loader=BaseTestDataLoaderConfig(),
         evaluators=[DummyEvaluatorConfig()],
         reader=BaseReaderConfig(),
@@ -178,7 +202,7 @@ def test_from_config_wires_components_and_evaluators() -> None:
     assert isinstance(orchestrator.converter, DummyConverter)
     assert isinstance(orchestrator.extractor, DummyExtractor)
     assert isinstance(orchestrator.test_data_loader, DummyTestDataLoader)
-    assert isinstance(orchestrator.exporter, DummyEvaluationExporter)
+    assert isinstance(orchestrator.evaluation_exporter, DummyEvaluationExporter)
     assert len(orchestrator.evaluators) == 1
     assert isinstance(orchestrator.evaluators[0], DummyEvaluator)
 
@@ -204,7 +228,7 @@ async def test_run_in_executor_with_context_preserves_contextvars() -> None:
 def test_from_config_missing_evaluator_config_raises() -> None:
     """Raise when evaluator config is missing for an evaluator class."""
     config = EvaluationPipelineConfig(
-        orchestrator=EvaluationOrchestratorConfig(max_workers=1, max_concurrency=2),
+        evaluation_orchestrator=EvaluationOrchestratorConfig(),
         test_data_loader=BaseTestDataLoaderConfig(),
         evaluators=[],
         reader=BaseReaderConfig(),
@@ -229,26 +253,35 @@ def test_from_config_missing_evaluator_config_raises() -> None:
 @pytest.mark.asyncio
 async def test_process_example_runs_pipeline() -> None:
     """Run extraction and evaluation for one example."""
+    pipeline_config = EvaluationPipelineConfig(
+        evaluation_orchestrator=EvaluationOrchestratorConfig(),
+        test_data_loader=BaseTestDataLoaderConfig(),
+        evaluators=[DummyEvaluatorConfig()],
+        reader=BaseReaderConfig(),
+        converter=BaseConverterConfig(),
+        extractor=BaseExtractorConfig(),
+        evaluation_exporter=BaseEvaluationExporterConfig(),
+    )
     orchestrator = EvaluationOrchestrator(
-        config=EvaluationOrchestratorConfig(max_workers=1, max_concurrency=1),
-        test_data_loader=DummyTestDataLoader(BaseTestDataLoaderConfig()),
-        reader=DummyReader(BaseReaderConfig()),
-        converter=DummyConverter(BaseConverterConfig()),
-        extractor=DummyExtractor(BaseExtractorConfig()),
-        evaluators=[DummyEvaluator(DummyEvaluatorConfig())],
-        exporter=DummyEvaluationExporter(BaseEvaluationExporterConfig()),
+        config=pipeline_config.evaluation_orchestrator,
+        test_data_loader=DummyTestDataLoader(pipeline_config),
+        reader=DummyReader(pipeline_config),
+        converter=DummyConverter(pipeline_config),
+        extractor=DummyExtractor(pipeline_config),
+        evaluators=[DummyEvaluator(pipeline_config)],
+        evaluation_exporter=DummyEvaluationExporter(pipeline_config),
         schema=DummySchema,
     )
 
     example: EvaluationExample[DummySchema] = EvaluationExample(
         id="example-1",
         path_identifier=PathIdentifier(path="doc-1"),
-        true=DummySchema(value="pred:doc-1"),
+        true=ExtractionResult(data=DummySchema(value="pred:doc-1")),
     )
 
     with ThreadPoolExecutor(max_workers=1) as pool:
         document, results = await orchestrator.process_example(
-            example, pool, asyncio.Semaphore(1)
+            example, pool, asyncio.Semaphore(1), PipelineContext()
         )
 
     assert document.id == "doc-1"
@@ -259,15 +292,24 @@ async def test_process_example_runs_pipeline() -> None:
 @pytest.mark.asyncio
 async def test_run_exports_only_valid_results() -> None:
     """Export only successful example results."""
-    exporter = DummyEvaluationExporter(BaseEvaluationExporterConfig())
+    pipeline_config = EvaluationPipelineConfig(
+        evaluation_orchestrator=EvaluationOrchestratorConfig(),
+        test_data_loader=BaseTestDataLoaderConfig(),
+        evaluators=[DummyEvaluatorConfig()],
+        reader=BaseReaderConfig(),
+        converter=BaseConverterConfig(),
+        extractor=BaseExtractorConfig(),
+        evaluation_exporter=BaseEvaluationExporterConfig(),
+    )
+    exporter = DummyEvaluationExporter(pipeline_config)
     orchestrator = EvaluationOrchestrator(
-        config=EvaluationOrchestratorConfig(max_workers=2, max_concurrency=2),
-        test_data_loader=DummyTestDataLoader(BaseTestDataLoaderConfig()),
-        reader=DummyReader(BaseReaderConfig()),
-        converter=DummyConverter(BaseConverterConfig()),
-        extractor=DummyExtractor(BaseExtractorConfig(), fail_on="doc-fail"),
-        evaluators=[DummyEvaluator(DummyEvaluatorConfig())],
-        exporter=exporter,
+        config=pipeline_config.evaluation_orchestrator,
+        test_data_loader=DummyTestDataLoader(pipeline_config),
+        reader=DummyReader(pipeline_config),
+        converter=DummyConverter(pipeline_config),
+        extractor=DummyExtractor(pipeline_config, fail_on="doc-fail"),
+        evaluators=[DummyEvaluator(pipeline_config)],
+        evaluation_exporter=exporter,
         schema=DummySchema,
     )
 
@@ -275,12 +317,12 @@ async def test_run_exports_only_valid_results() -> None:
         EvaluationExample(
             id="example-ok",
             path_identifier=PathIdentifier(path="doc-ok"),
-            true=DummySchema(value="pred:doc-ok"),
+            true=ExtractionResult(data=DummySchema(value="pred:doc-ok")),
         ),
         EvaluationExample(
             id="example-fail",
             path_identifier=PathIdentifier(path="doc-fail"),
-            true=DummySchema(value="pred:doc-fail"),
+            true=ExtractionResult(data=DummySchema(value="pred:doc-fail")),
         ),
     ]
 

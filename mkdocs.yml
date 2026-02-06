@@ -91,12 +91,15 @@ nav:
   - Concepts:
       - Overview: concepts/overview.md
       - Data Models: concepts/data-models.md
+      - Pipeline Context: concepts/pipeline-context.md
       - Extraction Pipeline: concepts/extraction-pipeline.md
       - Evaluation Pipeline: concepts/evaluation-pipeline.md
       - Configuration: concepts/configuration.md
   - Guides:
       - Implementing Extraction: guides/implementing-extraction.md
       - Implementing Evaluation: guides/implementing-evaluation.md
+      - Heterogeneous Documents: guides/heterogeneous-documents.md
+      - Production Patterns: guides/production-patterns.md
   - Examples: examples.md
   - API Reference:
       - Base Classes: api/base-classes.md

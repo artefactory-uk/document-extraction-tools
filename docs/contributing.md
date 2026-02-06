@@ -60,26 +60,38 @@ Example:
 class BaseExtractor(ABC):
     """Abstract interface for data extraction."""
 
-    def __init__(self, config: BaseExtractorConfig) -> None:
+    def __init__(
+        self,
+        config: BaseExtractorConfig | ExtractionPipelineConfig | EvaluationPipelineConfig,
+    ) -> None:
         """Initialize with a configuration object.
 
         Args:
-            config: Configuration specific to the extractor implementation.
+            config: Component-specific config or full pipeline configuration.
         """
-        self.config = config
+        if isinstance(config, (ExtractionPipelineConfig, EvaluationPipelineConfig)):
+            self.pipeline_config = config
+            self.config = config.extractor
+        else:
+            self.pipeline_config = None
+            self.config = config
 
     @abstractmethod
     async def extract(
-        self, document: Document, schema: type[ExtractionSchema]
-    ) -> ExtractionSchema:
+        self,
+        document: Document,
+        schema: type[ExtractionSchema],
+        context: PipelineContext | None = None,
+    ) -> ExtractionResult[ExtractionSchema]:
         """Extracts structured data from a Document to match the provided Schema.
 
         Args:
             document: The fully parsed document.
             schema: The Pydantic model class defining the target structure.
+            context: Optional shared pipeline context.
 
         Returns:
-            An instance of the schema populated with the extracted data.
+            An ExtractionResult containing the extracted data.
         """
         pass
 ```

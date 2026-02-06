@@ -1,6 +1,6 @@
 """Master Evaluation Pipeline Configuration."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from document_extraction_tools.config.base_converter_config import BaseConverterConfig
 from document_extraction_tools.config.base_evaluation_exporter_config import (
@@ -23,10 +23,30 @@ class EvaluationPipelineConfig(BaseModel):
     This class aggregates the configurations for all evaluation pipeline components.
     """
 
-    orchestrator: EvaluationOrchestratorConfig
-    test_data_loader: BaseTestDataLoaderConfig
-    evaluators: list[BaseEvaluatorConfig]
-    reader: BaseReaderConfig
-    converter: BaseConverterConfig
-    extractor: BaseExtractorConfig
-    evaluation_exporter: BaseEvaluationExporterConfig
+    evaluation_orchestrator: EvaluationOrchestratorConfig = Field(
+        ..., description="Configuration for orchestrating evaluation execution."
+    )
+
+    test_data_loader: BaseTestDataLoaderConfig = Field(
+        ..., description="Configuration for loading evaluation examples."
+    )
+
+    evaluators: list[BaseEvaluatorConfig] = Field(
+        ..., description="Evaluator configurations to apply."
+    )
+
+    reader: BaseReaderConfig = Field(
+        ..., description="Configuration for reading raw document bytes."
+    )
+
+    converter: BaseConverterConfig = Field(
+        ..., description="Configuration for converting raw bytes into documents."
+    )
+
+    extractor: BaseExtractorConfig = Field(
+        ..., description="Configuration for extracting structured data."
+    )
+
+    evaluation_exporter: BaseEvaluationExporterConfig = Field(
+        ..., description="Configuration for exporting evaluation results."
+    )

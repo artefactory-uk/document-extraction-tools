@@ -29,19 +29,34 @@ from document_extraction_tools.config.evaluation_orchestrator_config import (
 from document_extraction_tools.config.evaluation_pipeline_config import (
     EvaluationPipelineConfig,
 )
+from document_extraction_tools.types.context import PipelineContext
 from document_extraction_tools.types.document import Document
 from document_extraction_tools.types.document_bytes import DocumentBytes
 from document_extraction_tools.types.evaluation_example import EvaluationExample
 from document_extraction_tools.types.evaluation_result import EvaluationResult
+from document_extraction_tools.types.extraction_result import (
+    ExtractionResult,
+    ExtractionSchema,
+)
 from document_extraction_tools.types.path_identifier import PathIdentifier
-from document_extraction_tools.types.schema import ExtractionSchema
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
 class EvaluationOrchestrator(Generic[ExtractionSchema]):
-    """Coordinates evaluation across multiple evaluators."""
+    """Coordinates evaluation across multiple evaluators.
+
+    Attributes:
+        config (EvaluationOrchestratorConfig): Orchestrator configuration.
+        test_data_loader (BaseTestDataLoader[ExtractionSchema]): Test data loader instance.
+        reader (BaseReader): Reader component instance.
+        converter (BaseConverter): Converter component instance.
+        extractor (BaseExtractor): Extractor component instance.
+        evaluators (list[BaseEvaluator[ExtractionSchema]]): Evaluator instances.
+        evaluation_exporter (BaseEvaluationExporter): Evaluation exporter instance.
+        schema (type[ExtractionSchema]): Target extraction schema.
+    """
 
     def __init__(
         self,
@@ -51,7 +66,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         converter: BaseConverter,
         extractor: BaseExtractor,
         evaluators: Iterable[BaseEvaluator[ExtractionSchema]],
-        exporter: BaseEvaluationExporter,
+        evaluation_exporter: BaseEvaluationExporter,
         schema: type[ExtractionSchema],
     ) -> None:
         """Initialize the evaluation orchestrator with pipeline components.
@@ -63,7 +78,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             converter (BaseConverter): Component to transform bytes into Document objects.
             extractor (BaseExtractor): Component to generate predictions.
             evaluators (Iterable[BaseEvaluator[ExtractionSchema]]): Metrics to apply to each example.
-            exporter (BaseEvaluationExporter): Component to persist evaluation results.
+            evaluation_exporter (BaseEvaluationExporter): Component to persist evaluation results.
             schema (type[ExtractionSchema]): The target Pydantic model definition for extraction.
         """
         self.config = config
@@ -72,7 +87,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         self.converter = converter
         self.extractor = extractor
         self.evaluators = list(evaluators)
-        self.exporter = exporter
+        self.evaluation_exporter = evaluation_exporter
         self.schema = schema
 
     @classmethod
@@ -105,41 +120,24 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         Returns:
             EvaluationOrchestrator[ExtractionSchema]: The configured orchestrator.
         """
-        reader_instance = reader_cls(config.reader)
-        converter_instance = converter_cls(config.converter)
-        extractor_instance = extractor_cls(config.extractor)
-        test_data_loader_instance = test_data_loader_cls(config.test_data_loader)
-        evaluation_exporter_instance = evaluation_exporter_cls(
-            config.evaluation_exporter
-        )
+        reader_instance = reader_cls(config)
+        converter_instance = converter_cls(config)
+        extractor_instance = extractor_cls(config)
+        test_data_loader_instance = test_data_loader_cls(config)
+        evaluation_exporter_instance = evaluation_exporter_cls(config)
 
-        config_lookup = {
-            item.__class__.__name__.replace("Config", ""): item
-            for item in config.evaluators
-        }
-
-        evaluators = []
-        for evaluator_cls in evaluator_classes:
-            evaluator_key = evaluator_cls.__name__
-            evaluator_config = config_lookup.get(evaluator_key)
-
-            if evaluator_config is not None:
-                evaluators.append(evaluator_cls(evaluator_config))
-            else:
-                raise ValueError(
-                    f"No configuration found for evaluator '{evaluator_key}'."
-                )
+        evaluators = [evaluator_cls(config) for evaluator_cls in evaluator_classes]
         if not evaluators:
-            raise ValueError("No valid evaluators configured.")
+            raise ValueError("No evaluators provided.")
 
         return cls(
-            config=config.orchestrator,
+            config=config.evaluation_orchestrator,
             test_data_loader=test_data_loader_instance,
             reader=reader_instance,
             converter=converter_instance,
             extractor=extractor_instance,
             evaluators=evaluators,
-            exporter=evaluation_exporter_instance,
+            evaluation_exporter=evaluation_exporter_instance,
             schema=schema,
         )
 
@@ -148,6 +146,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         path_identifier: PathIdentifier,
         reader: BaseReader,
         converter: BaseConverter,
+        context: PipelineContext,
     ) -> Document:
         """Performs the CPU-bound ingestion phase.
 
@@ -155,12 +154,13 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             path_identifier (PathIdentifier): The path identifier to the source file.
             reader (BaseReader): The reader instance to use.
             converter (BaseConverter): The converter instance to use.
+            context (PipelineContext): Shared pipeline context.
 
         Returns:
             Document: The fully parsed document object.
         """
-        doc_bytes: DocumentBytes = reader.read(path_identifier)
-        return converter.convert(doc_bytes)
+        doc_bytes: DocumentBytes = reader.read(path_identifier, context)
+        return converter.convert(doc_bytes, context)
 
     @staticmethod
     async def _run_in_executor_with_context(
@@ -188,6 +188,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
         example: EvaluationExample[ExtractionSchema],
         pool: ThreadPoolExecutor,
         semaphore: asyncio.Semaphore,
+        context: PipelineContext,
     ) -> tuple[Document, list[EvaluationResult]]:
         """Runs extraction, evaluation, and export for a single example.
 
@@ -195,6 +196,7 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             example (EvaluationExample[ExtractionSchema]): The evaluation example to process.
             pool (ThreadPoolExecutor): The thread pool for CPU-bound tasks.
             semaphore (asyncio.Semaphore): Semaphore to limit concurrency.
+            context (PipelineContext): Shared pipeline context.
 
         Returns:
             tuple[Document, list[EvaluationResult]]: The document and its evaluation results.
@@ -208,14 +210,17 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
             example.path_identifier,
             self.reader,
             self.converter,
+            context,
         )
 
         async with semaphore:
-            pred: ExtractionSchema = await self.extractor.extract(document, self.schema)
+            pred: ExtractionResult[ExtractionSchema] = await self.extractor.extract(
+                document, self.schema, context
+            )
 
             evaluation_tasks = [
                 self._run_in_executor_with_context(
-                    loop, pool, evaluator.evaluate, example.true, pred
+                    loop, pool, evaluator.evaluate, example.true, pred, context
                 )
                 for evaluator in self.evaluators
             ]
@@ -229,24 +234,28 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
     async def run(
         self,
         examples: list[EvaluationExample[ExtractionSchema]],
+        context: PipelineContext | None = None,
     ) -> None:
         """Run all evaluators and export results for the provided examples.
 
         Args:
             examples (list[EvaluationExample[ExtractionSchema]]): The evaluation examples to evaluate.
+            context (PipelineContext | None): Optional shared pipeline context.
         """
+        context = context or PipelineContext()
         semaphore = asyncio.Semaphore(self.config.max_concurrency)
 
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as pool:
             tasks = [
-                self.process_example(example, pool, semaphore) for example in examples
+                self.process_example(example, pool, semaphore, context)
+                for example in examples
             ]
 
-            results_or_exceptions = await asyncio.gather(*tasks, return_exceptions=True)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
             valid_results: list[tuple[Document, list[EvaluationResult]]] = []
 
-            for example, result in zip(examples, results_or_exceptions, strict=True):
+            for example, result in zip(examples, results, strict=True):
                 if isinstance(result, BaseException):
                     logger.error(
                         "Evaluation pipeline failed for %s",
@@ -257,4 +266,4 @@ class EvaluationOrchestrator(Generic[ExtractionSchema]):
                     valid_results.append(result)
 
             if valid_results:
-                await self.exporter.export(valid_results)
+                await self.evaluation_exporter.export(valid_results, context)

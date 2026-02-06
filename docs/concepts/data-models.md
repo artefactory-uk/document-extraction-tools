@@ -13,7 +13,7 @@ from document_extraction_tools.types import PathIdentifier
 
 path = PathIdentifier(
     path="/data/invoices/invoice_001.pdf",
-    context={"source": "email", "received_date": "2024-01-15"}
+    metadata={"source": "email", "received_date": "2024-01-15"}
 )
 ```
 
@@ -26,7 +26,6 @@ from document_extraction_tools.types import DocumentBytes
 
 doc_bytes = DocumentBytes(
     file_bytes=raw_bytes,
-    mime_type="application/pdf",
     path_identifier=path_identifier,
 )
 ```
@@ -124,16 +123,18 @@ class InvoiceSchema(BaseModel):
 A ground truth + file path pair for evaluation:
 
 ```python
-from document_extraction_tools.types import EvaluationExample
+from document_extraction_tools.types import EvaluationExample, ExtractionResult, PathIdentifier
 
 example = EvaluationExample(
     id="/data/test/invoice_001.pdf",
     path_identifier=PathIdentifier(path="/data/test/invoice_001.pdf"),
-    true=InvoiceSchema(
-        invoice_id="12345",
-        vendor="Acme Corp",
-        total=1500.00
-    )
+    true=ExtractionResult(
+        data=InvoiceSchema(
+            invoice_id="12345",
+            vendor="Acme Corp",
+            total=1500.00
+        ),
+    ),
 )
 ```
 

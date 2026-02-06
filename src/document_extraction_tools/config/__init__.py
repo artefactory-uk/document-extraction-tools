@@ -17,8 +17,8 @@ from document_extraction_tools.config.base_test_data_loader_config import (
     BaseTestDataLoaderConfig,
 )
 from document_extraction_tools.config.config_loader import (
-    load_config,
     load_evaluation_config,
+    load_extraction_config,
 )
 from document_extraction_tools.config.evaluation_orchestrator_config import (
     EvaluationOrchestratorConfig,
@@ -46,6 +46,6 @@ __all__ = [
     "EvaluationPipelineConfig",
     "ExtractionOrchestratorConfig",
     "ExtractionPipelineConfig",
-    "load_config",
+    "load_extraction_config",
     "load_evaluation_config",
 ]

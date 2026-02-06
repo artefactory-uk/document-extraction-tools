@@ -11,6 +11,7 @@ from document_extraction_tools.base import (
     BaseConverter,
     BaseExtractionExporter,
     BaseExtractor,
+    BaseFileLister,
     BaseReader,
 )
 from document_extraction_tools.config import (
@@ -28,8 +29,10 @@ from document_extraction_tools.runners import (
 from document_extraction_tools.types import (
     Document,
     DocumentBytes,
+    ExtractionResult,
     Page,
     PathIdentifier,
+    PipelineContext,
     TextData,
 )
 
@@ -40,33 +43,53 @@ class DummySchema(BaseModel):
     value: str
 
 
+class DummyFileLister(BaseFileLister):
+    """File lister stub used for wiring tests."""
+
+    def __init__(
+        self,
+        config: BaseFileListerConfig | ExtractionPipelineConfig,
+    ) -> None:
+        """Initialize the file lister stub."""
+        super().__init__(config)
+
+    def list_files(
+        self, _context: PipelineContext | None = None
+    ) -> list[PathIdentifier]:
+        """Return an empty list for tests."""
+        return []
+
+
 class DummyReader(BaseReader):
     """Reader stub that records calls."""
 
-    def __init__(self, config: BaseReaderConfig) -> None:
+    def __init__(self, config: BaseReaderConfig | ExtractionPipelineConfig) -> None:
         """Initialize the reader stub."""
         super().__init__(config)
         self.read_calls: list[PathIdentifier] = []
 
-    def read(self, path_identifier: PathIdentifier) -> DocumentBytes:
+    def read(
+        self, path_identifier: PathIdentifier, _context: PipelineContext | None = None
+    ) -> DocumentBytes:
         """Return fixed bytes while tracking read calls."""
         self.read_calls.append(path_identifier)
         return DocumentBytes(
             file_bytes=b"data",
             path_identifier=path_identifier,
-            mime_type="text/plain",
         )
 
 
 class DummyConverter(BaseConverter):
     """Converter stub that records calls."""
 
-    def __init__(self, config: BaseConverterConfig) -> None:
+    def __init__(self, config: BaseConverterConfig | ExtractionPipelineConfig) -> None:
         """Initialize the converter stub."""
         super().__init__(config)
         self.convert_calls: list[DocumentBytes] = []
 
-    def convert(self, document_bytes: DocumentBytes) -> Document:
+    def convert(
+        self, document_bytes: DocumentBytes, _context: PipelineContext | None = None
+    ) -> Document:
         """Return a minimal document while tracking conversion calls."""
         self.convert_calls.append(document_bytes)
         return Document(
@@ -83,31 +106,46 @@ class DummyConverter(BaseConverter):
 class DummyExtractor(BaseExtractor):
     """Extractor stub that can be configured to fail."""
 
-    def __init__(self, config: BaseExtractorConfig, fail_on: str | None = None) -> None:
+    def __init__(
+        self,
+        config: BaseExtractorConfig | ExtractionPipelineConfig,
+        fail_on: str | None = None,
+    ) -> None:
         """Initialize the extractor stub with an optional failure id."""
         super().__init__(config)
         self.fail_on = fail_on
         self.extract_calls: list[Document] = []
 
     async def extract(
-        self, document: Document, schema: type[DummySchema]
-    ) -> DummySchema:
+        self,
+        document: Document,
+        schema: type[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> ExtractionResult[DummySchema]:
         """Return a schema instance or raise for configured ids."""
         self.extract_calls.append(document)
         if self.fail_on is not None and document.id == self.fail_on:
             raise RuntimeError("boom")
-        return schema(value=f"extracted:{document.id}")
+        return ExtractionResult(data=schema(value=f"extracted:{document.id}"))
 
 
 class DummyExporter(BaseExtractionExporter):
     """Exporter stub that records calls."""
 
-    def __init__(self, config: BaseExtractionExporterConfig) -> None:
+    def __init__(
+        self,
+        config: BaseExtractionExporterConfig | ExtractionPipelineConfig,
+    ) -> None:
         """Initialize the exporter stub."""
         super().__init__(config)
         self.export_calls: list[tuple[Document, DummySchema]] = []
 
-    async def export(self, document: Document, data: DummySchema) -> None:
+    async def export(
+        self,
+        document: Document,
+        data: ExtractionResult[DummySchema],
+        _context: PipelineContext | None = None,
+    ) -> None:
         """Record exports without persisting data."""
         self.export_calls.append((document, data))
 
@@ -115,28 +153,29 @@ class DummyExporter(BaseExtractionExporter):
 def test_from_config_wires_components() -> None:
     """Instantiate and wire pipeline components from config."""
     config = ExtractionPipelineConfig(
-        orchestrator=ExtractionOrchestratorConfig(max_workers=1, max_concurrency=2),
+        extraction_orchestrator=ExtractionOrchestratorConfig(),
         file_lister=BaseFileListerConfig(),
         reader=BaseReaderConfig(),
         converter=BaseConverterConfig(),
         extractor=BaseExtractorConfig(),
-        exporter=BaseExtractionExporterConfig(),
+        extraction_exporter=BaseExtractionExporterConfig(),
     )
 
     orchestrator = ExtractionOrchestrator.from_config(
         config=config,
         schema=DummySchema,
+        file_lister_cls=DummyFileLister,
         reader_cls=DummyReader,
         converter_cls=DummyConverter,
         extractor_cls=DummyExtractor,
-        exporter_cls=DummyExporter,
+        extraction_exporter_cls=DummyExporter,
     )
 
+    assert isinstance(orchestrator.file_lister, DummyFileLister)
     assert isinstance(orchestrator.reader, DummyReader)
     assert isinstance(orchestrator.converter, DummyConverter)
     assert isinstance(orchestrator.extractor, DummyExtractor)
-    assert isinstance(orchestrator.exporter, DummyExporter)
-    assert orchestrator.config.max_workers == 1
+    assert isinstance(orchestrator.extraction_exporter, DummyExporter)
     assert orchestrator.schema is DummySchema
 
 
@@ -161,43 +200,63 @@ async def test_run_in_executor_with_context_preserves_contextvars() -> None:
 @pytest.mark.asyncio
 async def test_process_document_runs_pipeline() -> None:
     """Run the full pipeline for a single document."""
-    reader = DummyReader(BaseReaderConfig())
-    converter = DummyConverter(BaseConverterConfig())
-    extractor = DummyExtractor(BaseExtractorConfig())
-    exporter = DummyExporter(BaseExtractionExporterConfig())
+    pipeline_config = ExtractionPipelineConfig(
+        extraction_orchestrator=ExtractionOrchestratorConfig(),
+        file_lister=BaseFileListerConfig(),
+        reader=BaseReaderConfig(),
+        converter=BaseConverterConfig(),
+        extractor=BaseExtractorConfig(),
+        extraction_exporter=BaseExtractionExporterConfig(),
+    )
+    reader = DummyReader(pipeline_config)
+    converter = DummyConverter(pipeline_config)
+    extractor = DummyExtractor(pipeline_config)
+    exporter = DummyExporter(pipeline_config)
     orchestrator = ExtractionOrchestrator(
-        config=ExtractionOrchestratorConfig(max_workers=1, max_concurrency=1),
+        config=pipeline_config.extraction_orchestrator,
+        file_lister=DummyFileLister(pipeline_config),
         reader=reader,
         converter=converter,
         extractor=extractor,
-        exporter=exporter,
+        extraction_exporter=exporter,
         schema=DummySchema,
     )
 
     path = PathIdentifier(path="doc-1")
     with ThreadPoolExecutor(max_workers=1) as pool:
-        await orchestrator.process_document(path, pool, asyncio.Semaphore(1))
+        await orchestrator.process_document(
+            path, pool, asyncio.Semaphore(1), PipelineContext()
+        )
 
     assert reader.read_calls == [path]
     assert len(converter.convert_calls) == 1
     assert len(extractor.extract_calls) == 1
     assert len(exporter.export_calls) == 1
-    assert exporter.export_calls[0][1].value == "extracted:doc-1"
+    assert exporter.export_calls[0][1].data.value == "extracted:doc-1"
 
 
 @pytest.mark.asyncio
 async def test_run_skips_failed_documents() -> None:
     """Skip exports when a document fails during processing."""
-    reader = DummyReader(BaseReaderConfig())
-    converter = DummyConverter(BaseConverterConfig())
-    extractor = DummyExtractor(BaseExtractorConfig(), fail_on="doc-fail")
-    exporter = DummyExporter(BaseExtractionExporterConfig())
+    pipeline_config = ExtractionPipelineConfig(
+        extraction_orchestrator=ExtractionOrchestratorConfig(),
+        file_lister=BaseFileListerConfig(),
+        reader=BaseReaderConfig(),
+        converter=BaseConverterConfig(),
+        extractor=BaseExtractorConfig(),
+        extraction_exporter=BaseExtractionExporterConfig(),
+    )
+    reader = DummyReader(pipeline_config)
+    converter = DummyConverter(pipeline_config)
+    extractor = DummyExtractor(pipeline_config, fail_on="doc-fail")
+    exporter = DummyExporter(pipeline_config)
     orchestrator = ExtractionOrchestrator(
-        config=ExtractionOrchestratorConfig(max_workers=2, max_concurrency=2),
+        config=pipeline_config.extraction_orchestrator,
+        file_lister=DummyFileLister(pipeline_config),
         reader=reader,
         converter=converter,
         extractor=extractor,
-        exporter=exporter,
+        extraction_exporter=exporter,
         schema=DummySchema,
     )
 

@@ -1,4 +1,8 @@
-"""Models for identifying the source of a document."""
+"""Model for path identifiers.
+
+This model provides a unified way to reference document sources
+using paths, along with optional metadata.
+"""
 
 from pathlib import Path
 from typing import Any
@@ -11,6 +15,7 @@ class PathIdentifier(BaseModel):
 
     path: str | Path = Field(..., description="The primary path identifier.")
 
-    context: dict[str, Any] = Field(
-        default_factory=dict, description="Optional execution context."
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional metadata associated with the path identifier.",
     )
