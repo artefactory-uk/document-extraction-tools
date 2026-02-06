@@ -53,19 +53,52 @@ async def process_document(
 
     # Step 4: Export results (asynchronous, I/O-bound)
     await exporter.export(document, extracted_data, context)
+```
 
+### Initializing Components
 
+Use `load_extraction_config()` to load all component configs from YAML files. It returns an `ExtractionPipelineConfig` containing sub-configs for each component:
+
+```python
+from document_extraction_tools.config import load_extraction_config
+
+config = load_extraction_config(
+    lister_config_cls=LocalFileListerConfig,
+    reader_config_cls=LocalReaderConfig,
+    converter_config_cls=PDFConverterConfig,
+    extractor_config_cls=GeminiExtractorConfig,
+    extraction_exporter_config_cls=JSONExporterConfig,
+    config_dir=Path("config/yaml"),
+)
+```
+
+Every base class accepts **either** the full `ExtractionPipelineConfig` or its individual sub-config. When you pass the full pipeline config, the component automatically extracts its relevant sub-config:
+
+```python
 async def main():
-    # Initialize components (configs come from load_extraction_config())
-    # You can also use ExtractionOrchestrator.from_config() for managed setup
-    config = load_extraction_config(...)
+    config = load_extraction_config(
+        lister_config_cls=LocalFileListerConfig,
+        reader_config_cls=LocalReaderConfig,
+        converter_config_cls=PDFConverterConfig,
+        extractor_config_cls=GeminiExtractorConfig,
+        extraction_exporter_config_cls=JSONExporterConfig,
+        config_dir=Path("config/yaml"),
+    )
+
+    # Option 1: Pass the full pipeline config (component extracts its sub-config)
+    reader = MyReader(config)
+    converter = MyConverter(config)
+    extractor = MyExtractor(config)
+    exporter = MyExporter(config)
+
+    # Option 2: Pass individual sub-configs directly
     reader = MyReader(config.reader)
     converter = MyConverter(config.converter)
     extractor = MyExtractor(config.extractor)
     exporter = MyExporter(config.extraction_exporter)
 
     # Get files to process
-    file_lister = MyFileLister(config.file_lister)
+    file_lister = MyFileLister(config)
     file_paths = file_lister.list_files()
 
     # Process each document
@@ -382,14 +415,25 @@ class ResumablePipeline:
 import asyncio
 from pathlib import Path
 
+from document_extraction_tools.config import load_extraction_config
+
 
 async def main():
-    # Initialize components (configs come from load_extraction_config())
-    config = load_extraction_config(...)
-    reader = LocalReader(config.reader)
-    converter = PDFConverter(config.converter)
-    extractor = GeminiExtractor(config.extractor)
-    exporter = JSONExporter(config.extraction_exporter)
+    # Load the full pipeline config from YAML files
+    config = load_extraction_config(
+        lister_config_cls=LocalFileListerConfig,
+        reader_config_cls=LocalReaderConfig,
+        converter_config_cls=PDFConverterConfig,
+        extractor_config_cls=GeminiExtractorConfig,
+        extraction_exporter_config_cls=JSONExporterConfig,
+        config_dir=Path("config/yaml"),
+    )
+
+    # Initialize components with the full pipeline config
+    reader = LocalReader(config)
+    converter = PDFConverter(config)
+    extractor = GeminiExtractor(config)
+    exporter = JSONExporter(config)
 
     # Create checkpoint manager
     checkpoint_manager = CheckpointManager(Path("./checkpoints"))
@@ -407,7 +451,7 @@ async def main():
     )
 
     # Get files to process
-    file_lister = LocalFileLister(lister_config)
+    file_lister = LocalFileLister(config)
     file_paths = file_lister.list_files()
 
     # Option 1: Start new run
